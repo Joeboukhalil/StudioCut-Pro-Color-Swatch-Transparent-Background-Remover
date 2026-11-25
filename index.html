@@ -1,0 +1,2724 @@
+<!DOCTYPE html>
+<html lang="en" class="dark">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>StudioCut Pro — Color-Swatch Background Remover</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet" />
+  <script>
+    tailwind.config = {
+      darkMode: 'class',
+      theme: {
+        extend: {
+          fontFamily: {
+            sans: ['Inter', 'system-ui', '-apple-system', 'sans-serif']
+          },
+          colors: {
+            studio: {
+              950: '#0b0d12',
+              900: '#11151d',
+              850: '#161b26',
+              800: '#1d2332',
+              750: '#252c3f',
+              700: '#2f384f',
+              600: '#3f4b69'
+            }
+          }
+        }
+      }
+    };
+  </script>
+  <style>
+    html, body {
+      height: 100dvh;
+      width: 100%;
+      margin: 0;
+      padding: 0;
+      overflow: hidden;
+      background-color: #0b0d12;
+      color: #f1f5f9;
+      font-family: 'Inter', system-ui, -apple-system, sans-serif;
+      user-select: none;
+      -webkit-user-select: none;
+    }
+
+    /* Custom subtle scrollbars for inspector panels */
+    .studio-scroll::-webkit-scrollbar {
+      width: 6px;
+      height: 6px;
+    }
+    .studio-scroll::-webkit-scrollbar-track {
+      background: transparent;
+    }
+    .studio-scroll::-webkit-scrollbar-thumb {
+      background: #2f384f;
+      border-radius: 9999px;
+    }
+    .studio-scroll::-webkit-scrollbar-thumb:hover {
+      background: #475569;
+    }
+
+    /* Custom range sliders */
+    input[type="range"].studio-slider {
+      -webkit-appearance: none;
+      appearance: none;
+      background: #1d2332;
+      height: 6px;
+      border-radius: 9999px;
+      outline: none;
+    }
+    input[type="range"].studio-slider::-webkit-slider-thumb {
+      -webkit-appearance: none;
+      appearance: none;
+      width: 16px;
+      height: 16px;
+      border-radius: 50%;
+      background: #60a5fa;
+      border: 2px solid #0b0d12;
+      box-shadow: 0 0 0 1px rgba(96, 165, 250, 0.45);
+      cursor: pointer;
+      transition: transform 0.12s ease, background-color 0.12s ease;
+    }
+    input[type="range"].studio-slider::-webkit-slider-thumb:hover {
+      transform: scale(1.12);
+      background: #93c5fd;
+    }
+    input[type="range"].studio-slider::-moz-range-thumb {
+      width: 16px;
+      height: 16px;
+      border-radius: 50%;
+      background: #60a5fa;
+      border: 2px solid #0b0d12;
+      box-shadow: 0 0 0 1px rgba(96, 165, 250, 0.45);
+      cursor: pointer;
+    }
+
+    /* Checkerboard preview swatch for color cards & backdrop indicator */
+    .mini-checker {
+      background-color: #cbd5e1;
+      background-image:
+        linear-gradient(45deg, #94a3b8 25%, transparent 25%),
+        linear-gradient(-45deg, #94a3b8 25%, transparent 25%),
+        linear-gradient(45deg, transparent 75%, #94a3b8 75%),
+        linear-gradient(-45deg, transparent 75%, #94a3b8 75%);
+      background-size: 8px 8px;
+      background-position: 0 0, 0 4px, 4px -4px, -4px 0;
+    }
+  </style>
+</head>
+<body class="flex flex-col h-[100dvh] w-full overflow-hidden bg-studio-950 text-slate-100">
+
+  <!-- TOP STUDIO BAR -->
+  <header class="h-13 md:h-14 shrink-0 bg-studio-900/95 border-b border-studio-750 px-2.5 md:px-4 flex items-center justify-between gap-2 z-30">
+    <!-- Left Brand & Image Actions -->
+    <div class="flex items-center gap-1.5 md:gap-2 min-w-0">
+      <div class="flex items-center gap-2 pr-1 md:pr-2">
+        <div class="w-8 h-8 rounded-lg bg-gradient-to-br from-blue-500 via-indigo-500 to-cyan-400 flex items-center justify-center shadow-md shadow-blue-950/60 shrink-0">
+          <svg class="w-4 h-4 text-white" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M12 3v3m0 12v3M3 12h3m12 0h3M5.64 5.64l2.12 2.12m8.48 8.48 2.12 2.12M18.36 5.64l-2.12 2.12m-8.48 8.48-2.12 2.12"/>
+            <circle cx="12" cy="12" r="3.5"/>
+          </svg>
+        </div>
+        <div class="hidden sm:block leading-tight">
+          <div class="text-sm font-semibold tracking-tight text-white flex items-center gap-1.5">
+            <span>StudioCut Pro</span>
+            <span id="liveScaleBadge" class="hidden text-[10px] font-medium px-1.5 py-0.5 rounded bg-amber-500/15 text-amber-300 border border-amber-500/30">Preview</span>
+          </div>
+          <div id="imageMetaLabel" class="text-[11px] text-slate-400 truncate max-w-[170px] lg:max-w-[240px]">No image loaded</div>
+        </div>
+      </div>
+
+      <input id="fileInput" type="file" accept="image/png,image/jpeg,image/webp,image/gif" class="hidden" />
+
+      <button id="uploadBtn" type="button" class="px-2.5 md:px-3 py-1.5 rounded-lg bg-blue-600 hover:bg-blue-500 active:bg-blue-700 text-white text-xs font-medium flex items-center gap-1.5 transition shadow-sm cursor-pointer">
+        <svg class="w-3.5 h-3.5 shrink-0" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
+          <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/>
+          <polyline points="17 8 12 3 7 8"/>
+          <line x1="12" y1="3" x2="12" y2="15"/>
+        </svg>
+        <span>Upload</span>
+      </button>
+
+      <!-- Sample Scenes Popover -->
+      <div class="relative">
+        <button id="samplesBtn" type="button" class="px-2.5 py-1.5 rounded-lg bg-studio-800 hover:bg-studio-750 border border-studio-700 text-slate-200 text-xs font-medium flex items-center gap-1 transition cursor-pointer" title="Load sample image">
+          <svg class="w-3.5 h-3.5 text-cyan-400 shrink-0" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <rect x="3" y="3" width="18" height="18" rx="2"/>
+            <circle cx="8.5" cy="8.5" r="1.5"/>
+            <polyline points="21 15 16 10 5 21"/>
+          </svg>
+          <span class="hidden md:inline">Samples</span>
+          <svg class="w-3 h-3 text-slate-400" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2">
+            <polyline points="6 9 12 15 18 9"/>
+          </svg>
+        </button>
+        <div id="samplesMenu" class="hidden absolute left-0 mt-1.5 w-52 rounded-xl bg-studio-850 border border-studio-700 shadow-2xl p-1.5 z-50">
+          <button data-sample="badge" type="button" class="w-full text-left px-3 py-2 rounded-lg hover:bg-studio-750 text-xs flex items-center justify-between transition cursor-pointer">
+            <div>
+              <div class="font-medium text-slate-100">Color Crest &amp; Star</div>
+              <div class="text-[10px] text-slate-400">Clean solid backdrop + multi-color art</div>
+            </div>
+            <span class="text-[10px] px-1.5 py-0.5 rounded bg-blue-500/15 text-blue-300">Demo</span>
+          </button>
+          <button data-sample="sunset" type="button" class="w-full text-left px-3 py-2 rounded-lg hover:bg-studio-750 text-xs flex items-center justify-between transition cursor-pointer">
+            <div>
+              <div class="font-medium text-slate-100">Geometric Lanterns</div>
+              <div class="text-[10px] text-slate-400">Warm tones on teal studio backdrop</div>
+            </div>
+            <span class="text-[10px] px-1.5 py-0.5 rounded bg-cyan-500/15 text-cyan-300">Demo</span>
+          </button>
+          <button data-sample="botanical" type="button" class="w-full text-left px-3 py-2 rounded-lg hover:bg-studio-750 text-xs flex items-center justify-between transition cursor-pointer">
+            <div>
+              <div class="font-medium text-slate-100">Botanical Blossom</div>
+              <div class="text-[10px] text-slate-400">Petal &amp; leaf palette over soft cream</div>
+            </div>
+            <span class="text-[10px] px-1.5 py-0.5 rounded bg-emerald-500/15 text-emerald-300">Demo</span>
+          </button>
+        </div>
+      </div>
+    </div>
+
+    <!-- Center History & Compare Controls -->
+    <div class="flex items-center gap-1 md:gap-1.5">
+      <button id="undoBtn" type="button" disabled class="p-2 rounded-lg bg-studio-800 hover:bg-studio-750 disabled:opacity-40 disabled:pointer-events-none border border-studio-700/80 text-slate-200 transition cursor-pointer" title="Undo (Ctrl+Z)">
+        <svg class="w-3.5 h-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
+          <path d="M9 14 4 9l5-5"/>
+          <path d="M4 9h10.5a5.5 5.5 0 0 1 5.5 5.5v0a5.5 5.5 0 0 1-5.5 5.5H11"/>
+        </svg>
+      </button>
+      <button id="redoBtn" type="button" disabled class="p-2 rounded-lg bg-studio-800 hover:bg-studio-750 disabled:opacity-40 disabled:pointer-events-none border border-studio-700/80 text-slate-200 transition cursor-pointer" title="Redo (Ctrl+Y / Ctrl+Shift+Z)">
+        <svg class="w-3.5 h-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
+          <path d="m15 14 5-5-5-5"/>
+          <path d="M20 9H9.5A5.5 5.5 0 0 0 4 14.5v0A5.5 5.5 0 0 0 9.5 20H13"/>
+        </svg>
+      </button>
+      <button id="resetBtn" type="button" class="px-2.5 py-1.5 rounded-lg bg-studio-800 hover:bg-studio-750 border border-studio-700/80 text-slate-300 hover:text-white text-xs font-medium transition cursor-pointer" title="Restore all pixels & clear selected colors">
+        Reset
+      </button>
+
+      <div class="h-5 w-px bg-studio-750 mx-0.5 hidden sm:block"></div>
+
+      <button id="compareBtn" type="button" class="px-2.5 py-1.5 rounded-lg bg-studio-800 hover:bg-studio-750 border border-studio-700/80 text-slate-200 text-xs font-medium flex items-center gap-1.5 transition cursor-pointer" title="Toggle split before/after comparison">
+        <svg class="w-3.5 h-3.5 text-amber-400 shrink-0" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+          <rect x="3" y="3" width="18" height="18" rx="2"/>
+          <line x1="12" y1="3" x2="12" y2="21"/>
+        </svg>
+        <span class="hidden sm:inline">Split</span>
+      </button>
+    </div>
+
+    <!-- Right Export Action -->
+    <div class="flex items-center gap-2 shrink-0">
+      <button id="downloadBtn" type="button" class="px-3 py-1.5 rounded-lg bg-emerald-600 hover:bg-emerald-500 active:bg-emerald-700 text-white text-xs font-semibold flex items-center gap-1.5 shadow-sm shadow-emerald-950/60 transition cursor-pointer" title="Download transparent PNG">
+        <svg class="w-3.5 h-3.5 shrink-0" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
+          <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/>
+          <polyline points="7 10 12 15 17 10"/>
+          <line x1="12" y1="15" x2="12" y2="3"/>
+        </svg>
+        <span>Download PNG</span>
+      </button>
+    </div>
+  </header>
+
+  <!-- WORKSPACE BODY: LEFT INSPECTOR PANEL + CENTER CANVAS STAGE -->
+  <div class="flex-1 min-h-0 w-full flex flex-col lg:flex-row overflow-hidden relative">
+
+    <!-- LEFT PANEL: COLOR SWATCHES & CUTOUT TOOLS -->
+    <aside class="order-2 lg:order-1 w-full lg:w-[360px] xl:w-[388px] h-[44dvh] sm:h-[40dvh] lg:h-full shrink-0 bg-studio-900 border-t lg:border-t-0 lg:border-r border-studio-750 flex flex-col min-h-0 z-20">
+
+      <!-- Tool Mode Switcher Tabs -->
+      <div class="grid grid-cols-5 gap-1 p-2 bg-studio-950/60 border-b border-studio-750 shrink-0" role="tablist" aria-label="Editing tools">
+        <button data-tab="colors" type="button" class="tool-tab py-2 px-1 rounded-lg text-[11px] font-medium flex flex-col items-center gap-0.5 transition cursor-pointer bg-blue-600 text-white shadow-sm">
+          <svg class="w-3.5 h-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.1">
+            <circle cx="13.5" cy="6.5" r="2.5"/>
+            <circle cx="17.5" cy="10.5" r="2.5"/>
+            <circle cx="8.5" cy="7.5" r="2.5"/>
+            <circle cx="6.5" cy="12.5" r="2.5"/>
+            <path d="M12 22c-4.97 0-9-4.03-9-9 0-1.66.45-3.22 1.23-4.56"/>
+            <path d="M22 13c0 4.97-4.03 9-9 9-.9 0-1.77-.13-2.59-.38"/>
+          </svg>
+          <span>Colors</span>
+        </button>
+
+        <button data-tab="wand" type="button" class="tool-tab py-2 px-1 rounded-lg text-[11px] font-medium flex flex-col items-center gap-0.5 transition cursor-pointer text-slate-300 hover:bg-studio-800">
+          <svg class="w-3.5 h-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.1">
+            <path d="m15 4-1 1 4 4 1-1a2.83 2.83 0 1 0-4-4Z"/>
+            <path d="m13 6-9.5 9.5a2.12 2.12 0 0 0 3 3L16 9"/>
+            <path d="M9 3v2M5 7H3m16 6v2m2-2h2"/>
+          </svg>
+          <span>Wand</span>
+        </button>
+
+        <button data-tab="brush" type="button" class="tool-tab py-2 px-1 rounded-lg text-[11px] font-medium flex flex-col items-center gap-0.5 transition cursor-pointer text-slate-300 hover:bg-studio-800">
+          <svg class="w-3.5 h-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.1">
+            <path d="m9.06 11.9 8.06-8.06a2.85 2.85 0 1 1 4.03 4.03l-8.06 8.06"/>
+            <path d="M7.07 14.94c-1.66 0-3 1.35-3 3.02 0 1.33-2.5 1.52-2 2.04 1.08 1.15 2.85 2 4.5 2 2.21 0 4-1.79 4-4 0-1.66-1.34-3-3-3.06Z"/>
+          </svg>
+          <span>Brush</span>
+        </button>
+
+        <button data-tab="lasso" type="button" class="tool-tab py-2 px-1 rounded-lg text-[11px] font-medium flex flex-col items-center gap-0.5 transition cursor-pointer text-slate-300 hover:bg-studio-800">
+          <svg class="w-3.5 h-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.1">
+            <path d="M7 22a5 5 0 0 1-2-4"/>
+            <path d="M3.3 14A6.8 6.8 0 0 1 2 10c0-4.4 4.5-8 10-8s10 3.6 10 8-4.5 8-10 8a12 12 0 0 1-3-.38"/>
+            <circle cx="5" cy="16" r="2"/>
+          </svg>
+          <span>Lasso</span>
+        </button>
+
+        <button data-tab="refine" type="button" class="tool-tab py-2 px-1 rounded-lg text-[11px] font-medium flex flex-col items-center gap-0.5 transition cursor-pointer text-slate-300 hover:bg-studio-800">
+          <svg class="w-3.5 h-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.1">
+            <circle cx="12" cy="12" r="9"/>
+            <path d="M12 3a9 9 0 0 1 0 18" fill="currentColor" fill-opacity="0.18"/>
+          </svg>
+          <span>Refine</span>
+        </button>
+      </div>
+
+      <!-- Scrollable Inspector Content -->
+      <div class="flex-1 overflow-y-auto studio-scroll p-3 space-y-3 min-h-0">
+
+        <!-- PANEL 1: COLOR SWATCHES (Primary Feature) -->
+        <section id="panel-colors" class="tool-panel space-y-3">
+          <div class="bg-studio-850 border border-studio-750 rounded-xl p-3 space-y-2.5">
+            <div class="flex items-center justify-between gap-2">
+              <div>
+                <h2 class="text-xs font-semibold text-white">Image Color Palette</h2>
+                <p class="text-[11px] text-slate-400">Click colors to make them transparent</p>
+              </div>
+              <div class="flex items-center gap-1.5">
+                <select id="swatchCountSelect" aria-label="Number of extracted colors" class="bg-studio-800 border border-studio-700 rounded-lg px-2 py-1 text-[11px] text-slate-200 focus:outline-none focus:border-blue-500 cursor-pointer">
+                  <option value="8">8 colors</option>
+                  <option value="16" selected>16 colors</option>
+                  <option value="24">24 colors</option>
+                  <option value="32">32 colors</option>
+                </select>
+              </div>
+            </div>
+
+            <!-- Action Strip: Eyedropper, Clear Selected, Auto-Pick Backdrop -->
+            <div class="flex flex-wrap items-center gap-1.5 pt-0.5">
+              <button id="eyedropperBtn" type="button" class="px-2.5 py-1.5 rounded-lg bg-studio-800 hover:bg-studio-750 border border-studio-700 text-[11px] font-medium text-slate-200 flex items-center gap-1.5 transition cursor-pointer">
+                <svg class="w-3.5 h-3.5 text-blue-400" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.1">
+                  <path d="m2 22 1-1h3l9-9"/>
+                  <path d="M3 21v-3l9-9"/>
+                  <path d="m15 6 3.4-3.4a2.1 2.1 0 1 1 3 3L18 9l.4.4a2.1 2.1 0 1 1-3 3l-3.8-3.8a2.1 2.1 0 1 1 3-3l.4.4Z"/>
+                </svg>
+                <span>+ Eyedropper</span>
+              </button>
+
+              <button id="pickBorderSwatchesBtn" type="button" class="px-2.5 py-1.5 rounded-lg bg-studio-800 hover:bg-studio-750 border border-studio-700 text-[11px] font-medium text-cyan-300 flex items-center gap-1 transition cursor-pointer" title="Select border backdrop colors">
+                <span>Edge BG</span>
+              </button>
+
+              <button id="clearSwatchesBtn" type="button" class="ml-auto px-2 py-1.5 rounded-lg bg-studio-800/70 hover:bg-studio-750 text-[11px] font-medium text-slate-400 hover:text-white transition cursor-pointer" title="Unselect all removed colors">
+                Clear (<span id="selectedSwatchCount">0</span>)
+              </button>
+            </div>
+          </div>
+
+          <!-- Swatch Grid -->
+          <div id="swatchGrid" class="grid grid-cols-2 sm:grid-cols-4 lg:grid-cols-2 gap-2"></div>
+
+          <!-- Color Matching Controls -->
+          <div class="bg-studio-850 border border-studio-750 rounded-xl p-3 space-y-3">
+            <div>
+              <div class="text-[11px] font-medium text-slate-300 mb-1.5">Removal Scope</div>
+              <div class="grid grid-cols-2 gap-1.5 bg-studio-950 p-1 rounded-lg border border-studio-750/70">
+                <button id="scopeAllBtn" type="button" class="py-1.5 px-2 rounded-md text-[11px] font-medium bg-blue-600 text-white transition cursor-pointer">
+                  All Matching
+                </button>
+                <button id="scopeEdgesBtn" type="button" class="py-1.5 px-2 rounded-md text-[11px] font-medium text-slate-300 hover:text-white transition cursor-pointer">
+                  Connected to Edges
+                </button>
+              </div>
+            </div>
+
+            <div>
+              <div class="flex items-center justify-between text-[11px] mb-1">
+                <label for="toleranceSlider" class="text-slate-300 font-medium">Color Tolerance</label>
+                <span id="toleranceValue" class="text-blue-400 font-semibold tabular-nums">32</span>
+              </div>
+              <input id="toleranceSlider" type="range" min="1" max="120" value="32" class="studio-slider w-full" />
+            </div>
+
+            <div>
+              <div class="flex items-center justify-between text-[11px] mb-1">
+                <label for="softnessSlider" class="text-slate-300 font-medium">Edge Softness</label>
+                <span id="softnessValue" class="text-blue-400 font-semibold tabular-nums">12%</span>
+              </div>
+              <input id="softnessSlider" type="range" min="0" max="100" value="12" class="studio-slider w-full" />
+            </div>
+          </div>
+        </section>
+
+        <!-- PANEL 2: MAGIC WAND -->
+        <section id="panel-wand" class="tool-panel hidden space-y-3">
+          <div class="bg-studio-850 border border-studio-750 rounded-xl p-3 space-y-3">
+            <div>
+              <h2 class="text-xs font-semibold text-white">Magic Wand</h2>
+              <p class="text-[11px] text-slate-400 mt-0.5">Tap or click on the canvas to erase similar connected pixels.</p>
+            </div>
+
+            <div class="grid grid-cols-2 gap-1.5 bg-studio-950 p-1 rounded-lg border border-studio-750/70">
+              <button id="wandActionErase" type="button" class="py-1.5 px-2 rounded-md text-[11px] font-medium bg-rose-600 text-white cursor-pointer">
+                Erase Region
+              </button>
+              <button id="wandActionRestore" type="button" class="py-1.5 px-2 rounded-md text-[11px] font-medium text-slate-300 hover:text-white cursor-pointer">
+                Restore Region
+              </button>
+            </div>
+
+            <div>
+              <div class="flex items-center justify-between text-[11px] mb-1">
+                <label for="wandToleranceSlider" class="text-slate-300 font-medium">Wand Tolerance</label>
+                <span id="wandToleranceValue" class="text-blue-400 font-semibold tabular-nums">28</span>
+              </div>
+              <input id="wandToleranceSlider" type="range" min="2" max="140" value="28" class="studio-slider w-full" />
+            </div>
+
+            <label class="flex items-center justify-between text-[11px] text-slate-300 pt-1 cursor-pointer">
+              <span>Contiguous area only</span>
+              <input id="wandContiguousCheckbox" type="checkbox" checked class="rounded accent-blue-500 w-4 h-4 cursor-pointer" />
+            </label>
+          </div>
+        </section>
+
+        <!-- PANEL 3: BRUSH (ERASE / RESTORE) -->
+        <section id="panel-brush" class="tool-panel hidden space-y-3">
+          <div class="bg-studio-850 border border-studio-750 rounded-xl p-3 space-y-3">
+            <div>
+              <h2 class="text-xs font-semibold text-white">Precision Brush</h2>
+              <p class="text-[11px] text-slate-400 mt-0.5">Paint directly on the image to erase or bring back pixels.</p>
+            </div>
+
+            <div class="grid grid-cols-2 gap-1.5 bg-studio-950 p-1 rounded-lg border border-studio-750/70">
+              <button id="brushModeErase" type="button" class="py-1.5 px-2 rounded-md text-[11px] font-medium bg-rose-600 text-white cursor-pointer">
+                Erase (Transparent)
+              </button>
+              <button id="brushModeRestore" type="button" class="py-1.5 px-2 rounded-md text-[11px] font-medium text-slate-300 hover:text-white cursor-pointer">
+                Restore (Opaque)
+              </button>
+            </div>
+
+            <div>
+              <div class="flex items-center justify-between text-[11px] mb-1">
+                <label for="brushSizeSlider" class="text-slate-300 font-medium">Brush Size</label>
+                <span id="brushSizeValue" class="text-blue-400 font-semibold tabular-nums">28 px</span>
+              </div>
+              <input id="brushSizeSlider" type="range" min="4" max="160" value="28" class="studio-slider w-full" />
+            </div>
+
+            <div>
+              <div class="flex items-center justify-between text-[11px] mb-1">
+                <label for="brushHardnessSlider" class="text-slate-300 font-medium">Edge Hardness</label>
+                <span id="brushHardnessValue" class="text-blue-400 font-semibold tabular-nums">75%</span>
+              </div>
+              <input id="brushHardnessSlider" type="range" min="5" max="100" value="75" class="studio-slider w-full" />
+            </div>
+          </div>
+        </section>
+
+        <!-- PANEL 4: LASSO CUTOUT -->
+        <section id="panel-lasso" class="tool-panel hidden space-y-3">
+          <div class="bg-studio-850 border border-studio-750 rounded-xl p-3 space-y-3">
+            <div>
+              <h2 class="text-xs font-semibold text-white">Freehand Lasso</h2>
+              <p class="text-[11px] text-slate-400 mt-0.5">Drag a closed loop on the canvas to erase inside or keep only inside.</p>
+            </div>
+
+            <div class="grid grid-cols-2 gap-1.5 bg-studio-950 p-1 rounded-lg border border-studio-750/70">
+              <button id="lassoModeEraseInside" type="button" class="py-1.5 px-2 rounded-md text-[11px] font-medium bg-rose-600 text-white cursor-pointer">
+                Erase Inside
+              </button>
+              <button id="lassoModeKeepInside" type="button" class="py-1.5 px-2 rounded-md text-[11px] font-medium text-slate-300 hover:text-white cursor-pointer">
+                Keep Inside Only
+              </button>
+            </div>
+
+            <div>
+              <div class="flex items-center justify-between text-[11px] mb-1">
+                <label for="lassoFeatherSlider" class="text-slate-300 font-medium">Lasso Feather</label>
+                <span id="lassoFeatherValue" class="text-blue-400 font-semibold tabular-nums">2 px</span>
+              </div>
+              <input id="lassoFeatherSlider" type="range" min="0" max="24" value="2" class="studio-slider w-full" />
+            </div>
+          </div>
+        </section>
+
+        <!-- PANEL 5: EDGE REFINE & EXPORT -->
+        <section id="panel-refine" class="tool-panel hidden space-y-3">
+          <div class="bg-studio-850 border border-studio-750 rounded-xl p-3 space-y-3">
+            <div>
+              <h2 class="text-xs font-semibold text-white">Edge Refinement</h2>
+              <p class="text-[11px] text-slate-400 mt-0.5">Smooth alpha edges or shift cutout boundary inward/outward.</p>
+            </div>
+
+            <div>
+              <div class="flex items-center justify-between text-[11px] mb-1">
+                <label for="refineFeatherSlider" class="text-slate-300 font-medium">Feather Radius</label>
+                <span id="refineFeatherValue" class="text-blue-400 font-semibold tabular-nums">0 px</span>
+              </div>
+              <input id="refineFeatherSlider" type="range" min="0" max="16" value="0" class="studio-slider w-full" />
+            </div>
+
+            <div>
+              <div class="flex items-center justify-between text-[11px] mb-1">
+                <label for="refineShiftSlider" class="text-slate-300 font-medium">Contract / Expand</label>
+                <span id="refineShiftValue" class="text-blue-400 font-semibold tabular-nums">0 px</span>
+              </div>
+              <input id="refineShiftSlider" type="range" min="-12" max="12" value="0" class="studio-slider w-full" />
+            </div>
+
+            <button id="applyRefineBtn" type="button" class="w-full py-2 px-3 rounded-lg bg-blue-600 hover:bg-blue-500 text-white text-xs font-medium transition cursor-pointer">
+              Bake Edge Refinement into Mask
+            </button>
+          </div>
+
+          <div class="bg-studio-850 border border-studio-750 rounded-xl p-3 space-y-2.5">
+            <div class="text-xs font-semibold text-white">Export Options</div>
+            <label class="flex items-center justify-between text-[11px] text-slate-300 cursor-pointer">
+              <span>Trim transparent outer margins</span>
+              <input id="trimTransparentCheckbox" type="checkbox" class="rounded accent-emerald-500 w-4 h-4 cursor-pointer" />
+            </label>
+          </div>
+        </section>
+
+      </div>
+    </aside>
+
+    <!-- CENTER INTERACTIVE CANVAS STAGE -->
+    <main id="canvasStage" class="order-1 lg:order-2 flex-1 min-h-[220px] lg:min-h-0 min-w-0 relative bg-studio-950 overflow-hidden">
+      <canvas id="viewportCanvas" class="block w-full h-full touch-none"></canvas>
+
+      <!-- Drag & Drop Overlay -->
+      <div id="dropOverlay" class="hidden fixed inset-0 bg-blue-950/75 backdrop-blur-xs border-2 border-dashed border-blue-400 z-40 flex items-center justify-center pointer-events-none">
+        <div class="px-6 py-4 rounded-2xl bg-studio-900/95 border border-blue-400/50 text-center shadow-2xl">
+          <div class="text-sm font-semibold text-white">Drop image to load &amp; extract colors</div>
+          <div class="text-xs text-blue-300 mt-1">Supports PNG, JPG, WebP</div>
+        </div>
+      </div>
+
+      <!-- Floating Bottom Zoom & View HUD -->
+      <div class="absolute bottom-3 left-1/2 -translate-x-1/2 bg-studio-900/90 backdrop-blur-md border border-studio-700/90 rounded-full px-2.5 py-1 flex items-center gap-1.5 shadow-xl z-20">
+        <button id="zoomOutBtn" type="button" class="w-7 h-7 rounded-full hover:bg-studio-800 text-slate-200 flex items-center justify-center text-sm font-semibold transition cursor-pointer" title="Zoom out">
+          −
+        </button>
+        <button id="fitScreenBtn" type="button" class="px-2 py-0.5 rounded-full hover:bg-studio-800 text-[11px] font-semibold text-slate-200 tabular-nums transition cursor-pointer" title="Fit to screen">
+          <span id="zoomLabel">100%</span>
+        </button>
+        <button id="zoomInBtn" type="button" class="w-7 h-7 rounded-full hover:bg-studio-800 text-slate-200 flex items-center justify-center text-sm font-semibold transition cursor-pointer" title="Zoom in">
+          +
+        </button>
+        <div class="h-4 w-px bg-studio-750 mx-0.5"></div>
+        <button id="panToolBtn" type="button" class="px-2.5 py-1 rounded-full hover:bg-studio-800 text-[11px] font-medium text-slate-300 hover:text-white transition cursor-pointer" title="Toggle Pan mode">
+          Pan
+        </button>
+      </div>
+    </main>
+  </div>
+
+  <!-- NON-BLOCKING TOAST NOTIFICATION -->
+  <div id="toastBanner" class="hidden fixed top-16 right-4 max-w-sm px-3.5 py-2.5 rounded-xl bg-studio-850/95 border border-studio-600 text-xs text-slate-100 shadow-2xl z-50 flex items-center gap-2 transition-opacity">
+    <span class="w-2 h-2 rounded-full bg-blue-400 shrink-0"></span>
+    <span id="toastMessage">Ready</span>
+  </div>
+
+  <script>
+    (function () {
+      'use strict';
+
+      // =========================================================================
+      // 1. DOM REFERENCES & DEFENSIVE HELPERS
+      // =========================================================================
+      const fileInput = document.getElementById('fileInput');
+      const uploadBtn = document.getElementById('uploadBtn');
+      const samplesBtn = document.getElementById('samplesBtn');
+      const samplesMenu = document.getElementById('samplesMenu');
+      const undoBtn = document.getElementById('undoBtn');
+      const redoBtn = document.getElementById('redoBtn');
+      const resetBtn = document.getElementById('resetBtn');
+      const compareBtn = document.getElementById('compareBtn');
+      const downloadBtn = document.getElementById('downloadBtn');
+
+      const canvasStage = document.getElementById('canvasStage');
+      const viewportCanvas = document.getElementById('viewportCanvas');
+      const vCtx = viewportCanvas.getContext('2d', { alpha: true });
+      const dropOverlay = document.getElementById('dropOverlay');
+
+      const swatchGrid = document.getElementById('swatchGrid');
+      const swatchCountSelect = document.getElementById('swatchCountSelect');
+      const eyedropperBtn = document.getElementById('eyedropperBtn');
+      const pickBorderSwatchesBtn = document.getElementById('pickBorderSwatchesBtn');
+      const clearSwatchesBtn = document.getElementById('clearSwatchesBtn');
+      const selectedSwatchCountEl = document.getElementById('selectedSwatchCount');
+
+      const scopeAllBtn = document.getElementById('scopeAllBtn');
+      const scopeEdgesBtn = document.getElementById('scopeEdgesBtn');
+      const toleranceSlider = document.getElementById('toleranceSlider');
+      const toleranceValue = document.getElementById('toleranceValue');
+      const softnessSlider = document.getElementById('softnessSlider');
+      const softnessValue = document.getElementById('softnessValue');
+
+      const wandActionErase = document.getElementById('wandActionErase');
+      const wandActionRestore = document.getElementById('wandActionRestore');
+      const wandToleranceSlider = document.getElementById('wandToleranceSlider');
+      const wandToleranceValue = document.getElementById('wandToleranceValue');
+      const wandContiguousCheckbox = document.getElementById('wandContiguousCheckbox');
+
+      const brushModeErase = document.getElementById('brushModeErase');
+      const brushModeRestore = document.getElementById('brushModeRestore');
+      const brushSizeSlider = document.getElementById('brushSizeSlider');
+      const brushSizeValue = document.getElementById('brushSizeValue');
+      const brushHardnessSlider = document.getElementById('brushHardnessSlider');
+      const brushHardnessValue = document.getElementById('brushHardnessValue');
+
+      const lassoModeEraseInside = document.getElementById('lassoModeEraseInside');
+      const lassoModeKeepInside = document.getElementById('lassoModeKeepInside');
+      const lassoFeatherSlider = document.getElementById('lassoFeatherSlider');
+      const lassoFeatherValue = document.getElementById('lassoFeatherValue');
+
+      const refineFeatherSlider = document.getElementById('refineFeatherSlider');
+      const refineFeatherValue = document.getElementById('refineFeatherValue');
+      const refineShiftSlider = document.getElementById('refineShiftSlider');
+      const refineShiftValue = document.getElementById('refineShiftValue');
+      const applyRefineBtn = document.getElementById('applyRefineBtn');
+      const trimTransparentCheckbox = document.getElementById('trimTransparentCheckbox');
+
+      const zoomInBtn = document.getElementById('zoomInBtn');
+      const zoomOutBtn = document.getElementById('zoomOutBtn');
+      const fitScreenBtn = document.getElementById('fitScreenBtn');
+      const panToolBtn = document.getElementById('panToolBtn');
+      const zoomLabel = document.getElementById('zoomLabel');
+      const imageMetaLabel = document.getElementById('imageMetaLabel');
+      const liveScaleBadge = document.getElementById('liveScaleBadge');
+
+      const toastBanner = document.getElementById('toastBanner');
+      const toastMessage = document.getElementById('toastMessage');
+
+      let toastTimer = null;
+      function showToast(msg, duration = 2600) {
+        toastMessage.textContent = msg;
+        toastBanner.classList.remove('hidden');
+        if (toastTimer) clearTimeout(toastTimer);
+        toastTimer = setTimeout(() => {
+          toastBanner.classList.add('hidden');
+        }, duration);
+      }
+
+      // Lazy checkerboard pattern generator (never touches uninitialized top-level vars)
+      let cachedCheckerPattern = null;
+      function ensureCheckerPattern() {
+        if (cachedCheckerPattern) return cachedCheckerPattern;
+        const tile = document.createElement('canvas');
+        tile.width = 20;
+        tile.height = 20;
+        const tCtx = tile.getContext('2d');
+        tCtx.fillStyle = '#e2e8f0';
+        tCtx.fillRect(0, 0, 20, 20);
+        tCtx.fillStyle = '#cbd5e1';
+        tCtx.fillRect(0, 0, 10, 10);
+        tCtx.fillRect(10, 10, 10, 10);
+        cachedCheckerPattern = vCtx.createPattern(tile, 'repeat');
+        return cachedCheckerPattern;
+      }
+
+      // =========================================================================
+      // 2. CORE BUFFERS & APPLICATION STATE
+      // =========================================================================
+      const MAX_WORK_PIXELS = 2100000; // ~2.1MP cap during live slider/swatch updates
+
+      // Full-resolution source & alpha buffers
+      const fullSrcCanvas = document.createElement('canvas');
+      const fullSrcCtx = fullSrcCanvas.getContext('2d', { willReadFrequently: true });
+      let fullSrcData = null;       // Uint8ClampedArray (RGBA) at full resolution
+      let fullBaseAlpha = null;     // Uint8Array original image alpha at full resolution
+      let fullManualMask = null;    // Uint8Array manual brush/wand/lasso overrides (0..255, 255 = keep, 0 = erase)
+      let fullManualActive = null;  // Uint8Array (0 or 1) whether pixel has manual override
+      let fullSwatchMask = null;    // Uint8Array computed swatch alpha (0..255)
+      let fullFinalAlpha = null;    // Uint8Array combined alpha (0..255)
+
+      // Working preview buffers (equal to full size when small, downscaled when huge)
+      let workW = 0;
+      let workH = 0;
+      let workScale = 1;
+      let workSrcData = null;       // Uint8ClampedArray (RGBA)
+      let workBaseAlpha = null;     // Uint8Array
+      let workManualMask = null;    // Uint8Array
+      let workManualActive = null;  // Uint8Array
+      let workSwatchMask = null;    // Uint8Array
+      let workFinalAlpha = null;    // Uint8Array
+
+      // Precomputed nearest-swatch lookup tables for working buffer
+      let nearestSwatchIdx = null;  // Int16Array length = workW * workH
+      let nearestSwatchDist = null; // Float32Array length = workW * workH
+
+      // Rendered display canvas (RGBA with transparency applied)
+      const displayCanvas = document.createElement('canvas');
+      const displayCtx = displayCanvas.getContext('2d', { willReadFrequently: true });
+      let displayImageData = null;
+
+      // Undo / Redo snapshot stack
+      const undoStack = [];
+      const redoStack = [];
+      const MAX_HISTORY = 24;
+
+      const state = {
+        fileName: 'cutout',
+        width: 0,
+        height: 0,
+        activeTab: 'colors',       // 'colors' | 'wand' | 'brush' | 'lasso' | 'refine'
+        previousTabBeforePan: 'colors',
+        eyedropperActive: false,
+
+        // Color swatches
+        swatchCount: 16,
+        palette: [],               // Array<{ id, r, g, b, hex, pct, isBorder, removed }>
+        scope: 'all',              // 'all' | 'edges'
+        tolerance: 32,             // RGB Euclidean distance threshold (1..120)
+        softness: 12,              // Soft transition percentage (0..100)
+
+        // Wand
+        wandAction: 'erase',       // 'erase' | 'restore'
+        wandTolerance: 28,
+        wandContiguous: true,
+
+        // Brush
+        brushMode: 'erase',        // 'erase' | 'restore'
+        brushSize: 28,
+        brushHardness: 75,
+
+        // Lasso
+        lassoMode: 'erase-inside', // 'erase-inside' | 'keep-inside'
+        lassoFeather: 2,
+        lassoPoints: [],           // Array<{ x, y }> in image coordinates
+        isDrawingLasso: false,
+
+        // Edge refine preview (non-destructive until baked or exported)
+        refineFeather: 0,
+        refineShift: 0,
+        trimTransparent: false,
+
+        // Viewport & comparison
+        zoom: 1,
+        panX: 0,
+        panY: 0,
+        splitCompare: false,
+        splitRatio: 0.5,           // 0..1 across image width
+        isDraggingSplit: false,
+        isPanning: false,
+        isPainting: false,
+        spaceHeld: false,
+        lastPointer: { x: 0, y: 0 },
+        lastImagePt: null,
+        pointerScreen: null,
+
+        // Scheduling flags
+        rafPending: false,
+        finalizeTimer: null
+      };
+
+      // =========================================================================
+      // 3. COLOR CLUSTERING & NEAREST-SWATCH CACHE
+      // =========================================================================
+      function rgbToHex(r, g, b) {
+        const toHex = (n) => Math.max(0, Math.min(255, Math.round(n))).toString(16).padStart(2, '0');
+        return `#${toHex(r)}${toHex(g)}${toHex(b)}`.toUpperCase();
+      }
+
+      function colorDistRgb(r1, g1, b1, r2, g2, b2) {
+        const dr = r1 - r2;
+        const dg = g1 - g2;
+        const db = b1 - b2;
+        return Math.sqrt(dr * dr + dg * dg + db * db);
+      }
+
+      /**
+       * Fast bounded k-means palette extraction on a compact ~200px sample buffer.
+       * Keeps extraction responsive even for large uploaded photographs.
+       */
+      function extractPaletteFromSource(rgba, w, h, k) {
+        try {
+          if (!rgba || w <= 0 || h <= 0) return [];
+
+          const maxDim = 200;
+          const scale = Math.min(1, maxDim / Math.max(w, h));
+          const sw = Math.max(1, Math.round(w * scale));
+          const sh = Math.max(1, Math.round(h * scale));
+
+          const sampleCanvas = document.createElement('canvas');
+          sampleCanvas.width = sw;
+          sampleCanvas.height = sh;
+          const sCtx = sampleCanvas.getContext('2d');
+          sCtx.drawImage(fullSrcCanvas, 0, 0, sw, sh);
+          const sData = sCtx.getImageData(0, 0, sw, sh).data;
+
+          // Collect visible pixels and also sample border pixels for BG badge detection
+          const pixels = [];
+          const borderColors = [];
+
+          for (let y = 0; y < sh; y++) {
+            for (let x = 0; x < sw; x++) {
+              const idx = (y * sw + x) * 4;
+              const a = sData[idx + 3];
+              if (a < 24) continue;
+              const r = sData[idx];
+              const g = sData[idx + 1];
+              const b = sData[idx + 2];
+              pixels.push(r, g, b);
+
+              if (x === 0 || y === 0 || x === sw - 1 || y === sh - 1) {
+                borderColors.push(r, g, b);
+              }
+            }
+          }
+
+          const totalPixels = pixels.length / 3;
+          if (totalPixels === 0) return [];
+
+          const actualK = Math.max(1, Math.min(k, totalPixels));
+
+          // Initialize centroids using evenly spaced samples
+          const centroids = new Float32Array(actualK * 3);
+          for (let c = 0; c < actualK; c++) {
+            const sampleIdx = Math.floor(((c + 0.5) / actualK) * totalPixels) * 3;
+            centroids[c * 3] = pixels[sampleIdx];
+            centroids[c * 3 + 1] = pixels[sampleIdx + 1];
+            centroids[c * 3 + 2] = pixels[sampleIdx + 2];
+          }
+
+          const counts = new Int32Array(actualK);
+          const sums = new Float64Array(actualK * 3);
+
+          // Bounded 8-iteration k-means with early stop
+          const maxIter = 8;
+          for (let iter = 0; iter < maxIter; iter++) {
+            counts.fill(0);
+            sums.fill(0);
+
+            for (let p = 0; p < totalPixels; p++) {
+              const pIdx = p * 3;
+              const pr = pixels[pIdx];
+              const pg = pixels[pIdx + 1];
+              const pb = pixels[pIdx + 2];
+
+              let bestC = 0;
+              let bestDist = Infinity;
+
+              for (let c = 0; c < actualK; c++) {
+                const cIdx = c * 3;
+                const dr = pr - centroids[cIdx];
+                const dg = pg - centroids[cIdx + 1];
+                const db = pb - centroids[cIdx + 2];
+                const d = dr * dr + dg * dg + db * db;
+                if (d < bestDist) {
+                  bestDist = d;
+                  bestC = c;
+                }
+              }
+
+              counts[bestC]++;
+              const sIdx = bestC * 3;
+              sums[sIdx] += pr;
+              sums[sIdx + 1] += pg;
+              sums[sIdx + 2] += pb;
+            }
+
+            let maxShift = 0;
+            for (let c = 0; c < actualK; c++) {
+              const cIdx = c * 3;
+              if (counts[c] > 0) {
+                const nr = sums[cIdx] / counts[c];
+                const ng = sums[cIdx + 1] / counts[c];
+                const nb = sums[cIdx + 2] / counts[c];
+                const shift = Math.abs(nr - centroids[cIdx]) + Math.abs(ng - centroids[cIdx + 1]) + Math.abs(nb - centroids[cIdx + 2]);
+                if (shift > maxShift) maxShift = shift;
+                centroids[cIdx] = nr;
+                centroids[cIdx + 1] = ng;
+                centroids[cIdx + 2] = nb;
+              }
+            }
+
+            if (maxShift < 1.2) break;
+          }
+
+          // Count border hits per cluster to flag likely background swatches
+          const borderHits = new Int32Array(actualK);
+          const borderTotal = borderColors.length / 3;
+          for (let b = 0; b < borderTotal; b++) {
+            const br = borderColors[b * 3];
+            const bg = borderColors[b * 3 + 1];
+            const bb = borderColors[b * 3 + 2];
+            let bestC = 0;
+            let bestDist = Infinity;
+            for (let c = 0; c < actualK; c++) {
+              const cIdx = c * 3;
+              const dr = br - centroids[cIdx];
+              const dg = bg - centroids[cIdx + 1];
+              const db = bb - centroids[cIdx + 2];
+              const d = dr * dr + dg * dg + db * db;
+              if (d < bestDist) {
+                bestDist = d;
+                bestC = c;
+              }
+            }
+            borderHits[bestC]++;
+          }
+
+          const swatches = [];
+          for (let c = 0; c < actualK; c++) {
+            if (counts[c] === 0) continue;
+            const r = Math.round(centroids[c * 3]);
+            const g = Math.round(centroids[c * 3 + 1]);
+            const b = Math.round(centroids[c * 3 + 2]);
+            const pct = (counts[c] / totalPixels) * 100;
+            const borderRatio = borderTotal > 0 ? borderHits[c] / borderTotal : 0;
+            swatches.push({
+              id: c,
+              r,
+              g,
+              b,
+              hex: rgbToHex(r, g, b),
+              pct,
+              isBorder: borderRatio >= 0.08 && borderHits[c] >= 2,
+              removed: false
+            });
+          }
+
+          // Sort most dominant colors first
+          swatches.sort((a, b) => b.pct - a.pct);
+          swatches.forEach((s, idx) => { s.id = idx; });
+          return swatches;
+        } catch (err) {
+          console.error('Palette extraction failed:', err);
+          showToast('Could not extract colors from this image.');
+          return [];
+        }
+      }
+
+      /**
+       * Precomputes nearest palette swatch index and RGB distance for every pixel
+       * in the working buffer so swatch toggles and tolerance drags are fast.
+       */
+      function rebuildNearestSwatchLookup() {
+        const count = workW * workH;
+        if (count <= 0) return;
+
+        nearestSwatchIdx = new Int16Array(count);
+        nearestSwatchDist = new Float32Array(count);
+
+        const pal = state.palette;
+        if (!pal || pal.length === 0 || !workSrcData) {
+          nearestSwatchIdx.fill(-1);
+          nearestSwatchDist.fill(9999);
+          return;
+        }
+
+        for (let i = 0; i < count; i++) {
+          const p = i * 4;
+          const r = workSrcData[p];
+          const g = workSrcData[p + 1];
+          const b = workSrcData[p + 2];
+
+          let bestIdx = -1;
+          let bestDistSq = Infinity;
+
+          for (let s = 0; s < pal.length; s++) {
+            const sw = pal[s];
+            const dr = r - sw.r;
+            const dg = g - sw.g;
+            const db = b - sw.b;
+            const dSq = dr * dr + dg * dg + db * db;
+            if (dSq < bestDistSq) {
+              bestDistSq = dSq;
+              bestIdx = s;
+            }
+          }
+
+          nearestSwatchIdx[i] = bestIdx;
+          nearestSwatchDist[i] = Math.sqrt(bestDistSq);
+        }
+      }
+
+      // =========================================================================
+      // 4. MASK COMPUTATION, EDGE REFINEMENT & COMPOSITING
+      // =========================================================================
+      function computeSwatchMask(w, h, srcData, baseAlpha, lookupIdx, lookupDist) {
+        const total = w * h;
+        const mask = new Uint8Array(total);
+        if (!srcData || !baseAlpha || total === 0) return mask;
+
+        const removedSet = new Set();
+        for (let i = 0; i < state.palette.length; i++) {
+          if (state.palette[i].removed) removedSet.add(i);
+        }
+
+        // If no swatch is selected, keep original base alpha completely intact
+        if (removedSet.size === 0) {
+          mask.set(baseAlpha);
+          return mask;
+        }
+
+        const tol = Math.max(1, state.tolerance);
+        const softBand = Math.max(0.5, tol * (state.softness / 100) + 1);
+        const rawMatch = new Uint8Array(total);
+
+        for (let i = 0; i < total; i++) {
+          if (baseAlpha[i] === 0) {
+            mask[i] = 0;
+            continue;
+          }
+
+          let dist = Infinity;
+          const sIdx = lookupIdx ? lookupIdx[i] : -1;
+          if (sIdx >= 0 && removedSet.has(sIdx)) {
+            dist = lookupDist[i];
+          } else {
+            // Check against all removed swatches (important when custom eyedropper colors are added)
+            const p = i * 4;
+            const r = srcData[p];
+            const g = srcData[p + 1];
+            const b = srcData[p + 2];
+            for (const idx of removedSet) {
+              const sw = state.palette[idx];
+              const d = colorDistRgb(r, g, b, sw.r, sw.g, sw.b);
+              if (d < dist) dist = d;
+            }
+          }
+
+          if (dist <= tol) {
+            rawMatch[i] = 255;
+            mask[i] = 0;
+          } else if (dist < tol + softBand) {
+            const t = (dist - tol) / softBand; // 0 -> 1
+            rawMatch[i] = Math.round((1 - t) * 255);
+            mask[i] = Math.round(baseAlpha[i] * t);
+          } else {
+            mask[i] = baseAlpha[i];
+          }
+        }
+
+        // If scope is 'edges', flood-fill from image borders so interior enclosed colors stay intact
+        if (state.scope === 'edges' && w > 2 && h > 2) {
+          const edgeReachable = new Uint8Array(total);
+          const queue = new Int32Array(total);
+          let head = 0;
+          let tail = 0;
+
+          const tryEnqueue = (idx) => {
+            if (idx < 0 || idx >= total) return;
+            if (edgeReachable[idx]) return;
+            if (rawMatch[idx] > 40) {
+              edgeReachable[idx] = 1;
+              queue[tail++] = idx;
+            }
+          };
+
+          for (let x = 0; x < w; x++) {
+            tryEnqueue(x);
+            tryEnqueue((h - 1) * w + x);
+          }
+          for (let y = 0; y < h; y++) {
+            tryEnqueue(y * w);
+            tryEnqueue(y * w + (w - 1));
+          }
+
+          while (head < tail) {
+            const cur = queue[head++];
+            const cx = cur % w;
+            const cy = (cur - cx) / w;
+            if (cx > 0) tryEnqueue(cur - 1);
+            if (cx < w - 1) tryEnqueue(cur + 1);
+            if (cy > 0) tryEnqueue(cur - w);
+            if (cy < h - 1) tryEnqueue(cur + w);
+          }
+
+          for (let i = 0; i < total; i++) {
+            if (baseAlpha[i] === 0) {
+              mask[i] = 0;
+            } else if (!edgeReachable[i]) {
+              // Restore pixels that weren't connected to the outer border
+              mask[i] = baseAlpha[i];
+            } else if (rawMatch[i] > 40 && edgeReachable[i]) {
+              mask[i] = 0;
+            }
+          }
+        }
+
+        return mask;
+      }
+
+      /**
+       * Separable fast box-blur on an alpha channel for smooth feathering.
+       */
+      function blurAlphaChannel(src, w, h, radius) {
+        const r = Math.max(0, Math.min(24, Math.round(radius)));
+        const out = new Uint8Array(w * h);
+        if (r === 0 || w === 0 || h === 0) {
+          out.set(src);
+          return out;
+        }
+
+        const temp = new Float32Array(w * h);
+        const windowSize = r * 2 + 1;
+
+        // Horizontal pass
+        for (let y = 0; y < h; y++) {
+          const rowOffset = y * w;
+          let sum = 0;
+          for (let k = -r; k <= r; k++) {
+            const sx = Math.max(0, Math.min(w - 1, k));
+            sum += src[rowOffset + sx];
+          }
+          for (let x = 0; x < w; x++) {
+            temp[rowOffset + x] = sum / windowSize;
+            const addX = Math.min(w - 1, x + r + 1);
+            const remX = Math.max(0, x - r);
+            sum += src[rowOffset + addX] - src[rowOffset + remX];
+          }
+        }
+
+        // Vertical pass
+        for (let x = 0; x < w; x++) {
+          let sum = 0;
+          for (let k = -r; k <= r; k++) {
+            const sy = Math.max(0, Math.min(h - 1, k));
+            sum += temp[sy * w + x];
+          }
+          for (let y = 0; y < h; y++) {
+            out[y * w + x] = Math.max(0, Math.min(255, Math.round(sum / windowSize)));
+            const addY = Math.min(h - 1, y + r + 1);
+            const remY = Math.max(0, y - r);
+            sum += temp[addY * w + x] - temp[remY * w + x];
+          }
+        }
+
+        return out;
+      }
+
+      /**
+       * Shifts mask boundary inward (contract < 0) or outward (expand > 0).
+       */
+      function shiftAlphaBoundary(src, w, h, shiftPx) {
+        const amt = Math.round(shiftPx);
+        const out = new Uint8Array(w * h);
+        if (amt === 0 || w === 0 || h === 0) {
+          out.set(src);
+          return out;
+        }
+
+        const rad = Math.min(12, Math.abs(amt));
+        const contract = amt < 0;
+
+        for (let y = 0; y < h; y++) {
+          const y0 = Math.max(0, y - rad);
+          const y1 = Math.min(h - 1, y + rad);
+          for (let x = 0; x < w; x++) {
+            const x0 = Math.max(0, x - rad);
+            const x1 = Math.min(w - 1, x + rad);
+            let extreme = contract ? 255 : 0;
+
+            for (let ny = y0; ny <= y1; ny++) {
+              const row = ny * w;
+              for (let nx = x0; nx <= x1; nx++) {
+                const v = src[row + nx];
+                if (contract) {
+                  if (v < extreme) extreme = v;
+                } else {
+                  if (v > extreme) extreme = v;
+                }
+              }
+            }
+            out[y * w + x] = extreme;
+          }
+        }
+
+        return out;
+      }
+
+      function combineMasks(baseAlpha, swatchMask, manualMask, manualActive) {
+        const total = baseAlpha.length;
+        const out = new Uint8Array(total);
+        for (let i = 0; i < total; i++) {
+          if (baseAlpha[i] === 0) {
+            out[i] = 0;
+          } else if (manualActive && manualActive[i]) {
+            out[i] = Math.min(baseAlpha[i], manualMask[i]);
+          } else {
+            out[i] = swatchMask[i];
+          }
+        }
+        return out;
+      }
+
+      function refreshWorkComposite() {
+        if (!workW || !workH || !workSrcData) return;
+
+        workSwatchMask = computeSwatchMask(
+          workW,
+          workH,
+          workSrcData,
+          workBaseAlpha,
+          nearestSwatchIdx,
+          nearestSwatchDist
+        );
+
+        let alpha = combineMasks(workBaseAlpha, workSwatchMask, workManualMask, workManualActive);
+
+        const scaledShift = state.refineShift * workScale;
+        const scaledFeather = state.refineFeather * workScale;
+        if (Math.abs(scaledShift) >= 0.5) {
+          alpha = shiftAlphaBoundary(alpha, workW, workH, scaledShift);
+        }
+        if (scaledFeather >= 0.5) {
+          alpha = blurAlphaChannel(alpha, workW, workH, scaledFeather);
+        }
+
+        workFinalAlpha = alpha;
+
+        if (displayCanvas.width !== workW || displayCanvas.height !== workH) {
+          displayCanvas.width = workW;
+          displayCanvas.height = workH;
+          displayImageData = displayCtx.createImageData(workW, workH);
+        }
+
+        const dst = displayImageData.data;
+        const src = workSrcData;
+        for (let i = 0, p = 0; i < alpha.length; i++, p += 4) {
+          dst[p] = src[p];
+          dst[p + 1] = src[p + 1];
+          dst[p + 2] = src[p + 2];
+          dst[p + 3] = alpha[i];
+        }
+        displayCtx.putImageData(displayImageData, 0, 0);
+      }
+
+      /**
+       * Finalizes full-resolution alpha mask (called after edits settle or before PNG export).
+       */
+      function finalizeFullResolutionMask() {
+        if (!state.width || !state.height || !fullSrcData) return;
+
+        fullSwatchMask = computeSwatchMask(
+          state.width,
+          state.height,
+          fullSrcData,
+          fullBaseAlpha,
+          null,
+          null
+        );
+
+        let alpha = combineMasks(fullBaseAlpha, fullSwatchMask, fullManualMask, fullManualActive);
+        if (Math.abs(state.refineShift) >= 1) {
+          alpha = shiftAlphaBoundary(alpha, state.width, state.height, state.refineShift);
+        }
+        if (state.refineFeather >= 1) {
+          alpha = blurAlphaChannel(alpha, state.width, state.height, state.refineFeather);
+        }
+        fullFinalAlpha = alpha;
+      }
+
+      function scheduleFullFinalize() {
+        if (state.finalizeTimer) clearTimeout(state.finalizeTimer);
+        state.finalizeTimer = setTimeout(() => {
+          finalizeFullResolutionMask();
+        }, 120);
+      }
+
+      function requestRender(needsWorkRebuild = true) {
+        if (needsWorkRebuild) {
+          refreshWorkComposite();
+        }
+        if (state.rafPending) return;
+        state.rafPending = true;
+        requestAnimationFrame(() => {
+          state.rafPending = false;
+          renderViewport();
+        });
+      }
+
+      // =========================================================================
+      // 5. UNDO / REDO HISTORY MANAGEMENT
+      // =========================================================================
+      function pushHistorySnapshot() {
+        if (!workManualMask || !workManualActive) return;
+        const snapshot = {
+          manualMask: new Uint8Array(workManualMask),
+          manualActive: new Uint8Array(workManualActive),
+          removedSwatches: state.palette.map((s) => !!s.removed),
+          tolerance: state.tolerance,
+          softness: state.softness,
+          scope: state.scope,
+          refineFeather: state.refineFeather,
+          refineShift: state.refineShift
+        };
+        undoStack.push(snapshot);
+        if (undoStack.length > MAX_HISTORY) {
+          undoStack.shift();
+        }
+        redoStack.length = 0;
+        updateHistoryButtons();
+      }
+
+      function applyHistorySnapshot(snap) {
+        if (!snap || !workManualMask || !workManualActive) return;
+        workManualMask.set(snap.manualMask);
+        workManualActive.set(snap.manualActive);
+        state.palette.forEach((s, idx) => {
+          s.removed = !!(snap.removedSwatches && snap.removedSwatches[idx]);
+        });
+        state.tolerance = snap.tolerance;
+        state.softness = snap.softness;
+        state.scope = snap.scope;
+        state.refineFeather = snap.refineFeather;
+        state.refineShift = snap.refineShift;
+
+        syncControlsFromState();
+        renderSwatchGrid();
+        syncWorkManualToFull();
+        requestRender(true);
+        scheduleFullFinalize();
+        updateHistoryButtons();
+      }
+
+      function undo() {
+        if (undoStack.length === 0) return;
+        const current = {
+          manualMask: new Uint8Array(workManualMask),
+          manualActive: new Uint8Array(workManualActive),
+          removedSwatches: state.palette.map((s) => !!s.removed),
+          tolerance: state.tolerance,
+          softness: state.softness,
+          scope: state.scope,
+          refineFeather: state.refineFeather,
+          refineShift: state.refineShift
+        };
+        redoStack.push(current);
+        const prev = undoStack.pop();
+        applyHistorySnapshot(prev);
+        showToast('Undid last change');
+      }
+
+      function redo() {
+        if (redoStack.length === 0) return;
+        const current = {
+          manualMask: new Uint8Array(workManualMask),
+          manualActive: new Uint8Array(workManualActive),
+          removedSwatches: state.palette.map((s) => !!s.removed),
+          tolerance: state.tolerance,
+          softness: state.softness,
+          scope: state.scope,
+          refineFeather: state.refineFeather,
+          refineShift: state.refineShift
+        };
+        undoStack.push(current);
+        const next = redoStack.pop();
+        applyHistorySnapshot(next);
+        showToast('Redid change');
+      }
+
+      function updateHistoryButtons() {
+        undoBtn.disabled = undoStack.length === 0;
+        redoBtn.disabled = redoStack.length === 0;
+      }
+
+      function syncWorkManualToFull() {
+        if (!fullManualMask || !fullManualActive || !workManualMask || !workManualActive) return;
+        if (workW === state.width && workH === state.height) {
+          fullManualMask.set(workManualMask);
+          fullManualActive.set(workManualActive);
+          return;
+        }
+        // Nearest-neighbor upscale manual edits to full resolution
+        for (let y = 0; y < state.height; y++) {
+          const wy = Math.min(workH - 1, Math.floor(y * workScale));
+          const fRow = y * state.width;
+          const wRow = wy * workW;
+          for (let x = 0; x < state.width; x++) {
+            const wx = Math.min(workW - 1, Math.floor(x * workScale));
+            const wIdx = wRow + wx;
+            if (workManualActive[wIdx]) {
+              const fIdx = fRow + x;
+              fullManualActive[fIdx] = 1;
+              fullManualMask[fIdx] = workManualMask[wIdx];
+            }
+          }
+        }
+      }
+
+      // =========================================================================
+      // 6. IMAGE INITIALIZATION, VIEWPORT SIZING & RENDERING
+      // =========================================================================
+      function getStageSize() {
+        const rect = canvasStage.getBoundingClientRect();
+        const fallbackW = Math.max(260, window.innerWidth - (window.innerWidth >= 1024 ? 388 : 0));
+        const fallbackH = Math.max(220, window.innerHeight - (window.innerWidth >= 1024 ? 56 : 320));
+        return {
+          width: rect.width > 16 ? Math.floor(rect.width) : fallbackW,
+          height: rect.height > 16 ? Math.floor(rect.height) : fallbackH
+        };
+      }
+
+      function resizeViewportCanvas() {
+        const { width, height } = getStageSize();
+        const dpr = Math.min(2, window.devicePixelRatio || 1);
+        viewportCanvas.style.width = `${width}px`;
+        viewportCanvas.style.height = `${height}px`;
+        viewportCanvas.width = Math.max(1, Math.floor(width * dpr));
+        viewportCanvas.height = Math.max(1, Math.floor(height * dpr));
+        vCtx.setTransform(dpr, 0, 0, dpr, 0, 0);
+      }
+
+      function fitImageToViewport() {
+        if (!state.width || !state.height) return;
+        const { width: stageW, height: stageH } = getStageSize();
+        const pad = window.innerWidth < 640 ? 24 : 56;
+        const availW = Math.max(60, stageW - pad);
+        const availH = Math.max(60, stageH - pad);
+        const fit = Math.min(availW / state.width, availH / state.height);
+        state.zoom = Math.max(0.05, Math.min(fit, 2.5));
+        state.panX = (stageW - state.width * state.zoom) / 2;
+        state.panY = (stageH - state.height * state.zoom) / 2;
+        zoomLabel.textContent = `${Math.round(state.zoom * 100)}%`;
+        requestRender(false);
+      }
+
+      function scheduleLayoutAndFit() {
+        resizeViewportCanvas();
+        fitImageToViewport();
+        requestAnimationFrame(() => {
+          resizeViewportCanvas();
+          fitImageToViewport();
+        });
+      }
+
+      function initImageFromElement(img, labelName) {
+        try {
+          const w = img.naturalWidth || img.width;
+          const h = img.naturalHeight || img.height;
+          if (!w || !h) {
+            showToast('Invalid image dimensions.');
+            return;
+          }
+
+          state.width = w;
+          state.height = h;
+          state.fileName = labelName || 'cutout';
+          state.refineFeather = 0;
+          state.refineShift = 0;
+          state.lassoPoints = [];
+          state.isDrawingLasso = false;
+          state.splitCompare = false;
+          compareBtn.classList.remove('ring-2', 'ring-amber-400', 'bg-studio-750');
+
+          // Full resolution source buffer
+          fullSrcCanvas.width = w;
+          fullSrcCanvas.height = h;
+          fullSrcCtx.clearRect(0, 0, w, h);
+          fullSrcCtx.drawImage(img, 0, 0, w, h);
+          fullSrcData = fullSrcCtx.getImageData(0, 0, w, h).data;
+
+          const fullCount = w * h;
+          fullBaseAlpha = new Uint8Array(fullCount);
+          for (let i = 0, p = 3; i < fullCount; i++, p += 4) {
+            fullBaseAlpha[i] = fullSrcData[p];
+          }
+          fullManualMask = new Uint8Array(fullCount);
+          fullManualMask.fill(255);
+          fullManualActive = new Uint8Array(fullCount);
+          fullSwatchMask = new Uint8Array(fullBaseAlpha);
+          fullFinalAlpha = new Uint8Array(fullBaseAlpha);
+
+          // Working preview buffer (downscaled only if > MAX_WORK_PIXELS)
+          if (fullCount > MAX_WORK_PIXELS) {
+            workScale = Math.sqrt(MAX_WORK_PIXELS / fullCount);
+            workW = Math.max(1, Math.round(w * workScale));
+            workH = Math.max(1, Math.round(h * workScale));
+            workScale = workW / w;
+            liveScaleBadge.classList.remove('hidden');
+          } else {
+            workScale = 1;
+            workW = w;
+            workH = h;
+            liveScaleBadge.classList.add('hidden');
+          }
+
+          const workCanvas = document.createElement('canvas');
+          workCanvas.width = workW;
+          workCanvas.height = workH;
+          const workCtx = workCanvas.getContext('2d');
+          workCtx.drawImage(fullSrcCanvas, 0, 0, workW, workH);
+          workSrcData = workCtx.getImageData(0, 0, workW, workH).data;
+
+          const workCount = workW * workH;
+          workBaseAlpha = new Uint8Array(workCount);
+          for (let i = 0, p = 3; i < workCount; i++, p += 4) {
+            workBaseAlpha[i] = workSrcData[p];
+          }
+          workManualMask = new Uint8Array(workCount);
+          workManualMask.fill(255);
+          workManualActive = new Uint8Array(workCount);
+          workSwatchMask = new Uint8Array(workBaseAlpha);
+          workFinalAlpha = new Uint8Array(workBaseAlpha);
+
+          undoStack.length = 0;
+          redoStack.length = 0;
+          updateHistoryButtons();
+
+          imageMetaLabel.textContent = `${state.fileName} (${w}×${h})`;
+          syncControlsFromState();
+
+          // Extract dominant colors & precompute nearest-swatch table
+          state.palette = extractPaletteFromSource(fullSrcData, w, h, state.swatchCount);
+          rebuildNearestSwatchLookup();
+          renderSwatchGrid();
+
+          refreshWorkComposite();
+          scheduleLayoutAndFit();
+        } catch (err) {
+          console.error('Failed to initialize image:', err);
+          showToast('Error loading image into studio.');
+        }
+      }
+
+      function renderViewport() {
+        const { width: stageW, height: stageH } = getStageSize();
+        vCtx.clearRect(0, 0, stageW, stageH);
+
+        // Dark studio backdrop
+        vCtx.fillStyle = '#0b0d12';
+        vCtx.fillRect(0, 0, stageW, stageH);
+
+        if (!state.width || !state.height || displayCanvas.width === 0) {
+          vCtx.fillStyle = '#94a3b8';
+          vCtx.font = '500 13px Inter, sans-serif';
+          vCtx.textAlign = 'center';
+          vCtx.fillText('Upload an image or choose a sample scene to begin', stageW / 2, stageH / 2);
+          return;
+        }
+
+        const dx = state.panX;
+        const dy = state.panY;
+        const dw = state.width * state.zoom;
+        const dh = state.height * state.zoom;
+
+        // Subtle elevation shadow behind cutout card
+        vCtx.save();
+        vCtx.shadowColor = 'rgba(0, 0, 0, 0.65)';
+        vCtx.shadowBlur = 24;
+        vCtx.shadowOffsetY = 8;
+        vCtx.fillStyle = '#161b26';
+        vCtx.fillRect(dx, dy, dw, dh);
+        vCtx.restore();
+
+        // Clip to image bounds
+        vCtx.save();
+        vCtx.beginPath();
+        vCtx.rect(dx, dy, dw, dh);
+        vCtx.clip();
+
+        // Transparency checkerboard
+        const checker = ensureCheckerPattern();
+        if (checker) {
+          vCtx.fillStyle = checker;
+          vCtx.fillRect(dx, dy, dw, dh);
+        } else {
+          vCtx.fillStyle = '#334155';
+          vCtx.fillRect(dx, dy, dw, dh);
+        }
+
+        // Draw processed transparent cutout
+        vCtx.imageSmoothingEnabled = true;
+        vCtx.imageSmoothingQuality = 'high';
+        vCtx.drawImage(displayCanvas, dx, dy, dw, dh);
+
+        // Optional split comparison (original source on left side of divider)
+        if (state.splitCompare) {
+          const splitX = dx + dw * state.splitRatio;
+          vCtx.save();
+          vCtx.beginPath();
+          vCtx.rect(dx, dy, Math.max(0, splitX - dx), dh);
+          vCtx.clip();
+          vCtx.drawImage(fullSrcCanvas, dx, dy, dw, dh);
+          vCtx.restore();
+
+          // Divider line & pill handle
+          vCtx.strokeStyle = '#f8fafc';
+          vCtx.lineWidth = 2;
+          vCtx.beginPath();
+          vCtx.moveTo(splitX, dy);
+          vCtx.lineTo(splitX, dy + dh);
+          vCtx.stroke();
+
+          const midY = dy + dh * 0.5;
+          vCtx.fillStyle = '#0f172a';
+          vCtx.strokeStyle = '#f8fafc';
+          vCtx.lineWidth = 1.5;
+          vCtx.beginPath();
+          vCtx.arc(splitX, midY, 13, 0, Math.PI * 2);
+          vCtx.fill();
+          vCtx.stroke();
+
+          vCtx.fillStyle = '#f8fafc';
+          vCtx.font = 'bold 10px Inter, sans-serif';
+          vCtx.textAlign = 'center';
+          vCtx.textBaseline = 'middle';
+          vCtx.fillText('◀ ▶', splitX, midY + 0.5);
+        }
+
+        // Draw active lasso path if present
+        if (state.lassoPoints.length > 1) {
+          vCtx.save();
+          vCtx.strokeStyle = '#60a5fa';
+          vCtx.lineWidth = 2;
+          vCtx.setLineDash([6, 4]);
+          vCtx.beginPath();
+          state.lassoPoints.forEach((pt, idx) => {
+            const sx = dx + pt.x * state.zoom;
+            const sy = dy + pt.y * state.zoom;
+            if (idx === 0) vCtx.moveTo(sx, sy);
+            else vCtx.lineTo(sx, sy);
+          });
+          if (!state.isDrawingLasso) vCtx.closePath();
+          vCtx.stroke();
+          vCtx.restore();
+        }
+
+        vCtx.restore();
+
+        // Brush cursor ring preview when using brush or eyedropper
+        if (state.pointerScreen && !state.isPanning && !state.spaceHeld) {
+          const px = state.pointerScreen.x;
+          const py = state.pointerScreen.y;
+          if (state.activeTab === 'brush') {
+            const radiusScreen = Math.max(3, (state.brushSize * 0.5) * state.zoom);
+            vCtx.save();
+            vCtx.strokeStyle = state.brushMode === 'erase' ? '#fb7185' : '#34d399';
+            vCtx.lineWidth = 1.6;
+            vCtx.beginPath();
+            vCtx.arc(px, py, radiusScreen, 0, Math.PI * 2);
+            vCtx.stroke();
+            vCtx.restore();
+          } else if (state.eyedropperActive) {
+            vCtx.save();
+            vCtx.strokeStyle = '#38bdf8';
+            vCtx.lineWidth = 1.6;
+            vCtx.beginPath();
+            vCtx.arc(px, py, 10, 0, Math.PI * 2);
+            vCtx.stroke();
+            vCtx.restore();
+          }
+        }
+      }
+
+      // =========================================================================
+      // 7. COLOR SWATCH UI & INTERACTIONS
+      // =========================================================================
+      function renderSwatchGrid() {
+        swatchGrid.innerHTML = '';
+        let removedCount = 0;
+
+        if (!state.palette || state.palette.length === 0) {
+          swatchGrid.innerHTML = `
+            <div class="col-span-2 text-center py-6 text-xs text-slate-400 bg-studio-850 rounded-xl border border-studio-750">
+              No colors extracted yet.
+            </div>`;
+          selectedSwatchCountEl.textContent = '0';
+          return;
+        }
+
+        state.palette.forEach((swatch) => {
+          if (swatch.removed) removedCount++;
+
+          const card = document.createElement('button');
+          card.type = 'button';
+          card.className = [
+            'group w-full text-left p-2 rounded-xl border transition flex items-center gap-2 cursor-pointer',
+            swatch.removed
+              ? 'bg-rose-950/35 border-rose-500/70 ring-1 ring-rose-500/40'
+              : 'bg-studio-850 hover:bg-studio-800 border-studio-750/90'
+          ].join(' ');
+
+          const chipWrap = document.createElement('div');
+          chipWrap.className = 'w-8 h-8 rounded-lg mini-checker overflow-hidden border border-white/15 shrink-0 relative';
+
+          const colorFill = document.createElement('div');
+          colorFill.className = 'w-full h-full transition-opacity';
+          colorFill.style.backgroundColor = swatch.hex;
+          if (swatch.removed) {
+            colorFill.style.opacity = '0.35';
+          }
+          chipWrap.appendChild(colorFill);
+
+          if (swatch.removed) {
+            const xBadge = document.createElement('div');
+            xBadge.className = 'absolute inset-0 flex items-center justify-center text-rose-300 font-bold text-xs bg-black/35';
+            xBadge.textContent = '✕';
+            chipWrap.appendChild(xBadge);
+          }
+
+          const meta = document.createElement('div');
+          meta.className = 'min-w-0 flex-1';
+
+          const topLine = document.createElement('div');
+          topLine.className = 'flex items-center justify-between gap-1';
+
+          const hexSpan = document.createElement('span');
+          hexSpan.className = 'text-[11px] font-semibold text-slate-100 truncate';
+          hexSpan.textContent = swatch.hex;
+
+          const pctSpan = document.createElement('span');
+          pctSpan.className = 'text-[10px] text-slate-400 tabular-nums shrink-0';
+          pctSpan.textContent = `${swatch.pct < 0.1 ? '<0.1' : swatch.pct.toFixed(1)}%`;
+
+          topLine.appendChild(hexSpan);
+          topLine.appendChild(pctSpan);
+
+          const bottomLine = document.createElement('div');
+          bottomLine.className = 'flex items-center gap-1 mt-0.5';
+
+          const statusTag = document.createElement('span');
+          statusTag.className = swatch.removed
+            ? 'text-[10px] font-medium text-rose-300'
+            : 'text-[10px] text-slate-400';
+          statusTag.textContent = swatch.removed ? 'Transparent' : 'Keep';
+          bottomLine.appendChild(statusTag);
+
+          if (swatch.isBorder) {
+            const bgTag = document.createElement('span');
+            bgTag.className = 'text-[9px] font-semibold px-1 py-0.2 rounded bg-cyan-500/15 text-cyan-300 border border-cyan-500/25';
+            bgTag.textContent = 'BG';
+            bottomLine.appendChild(bgTag);
+          }
+
+          meta.appendChild(topLine);
+          meta.appendChild(bottomLine);
+
+          card.appendChild(chipWrap);
+          card.appendChild(meta);
+
+          card.addEventListener('click', () => {
+            pushHistorySnapshot();
+            swatch.removed = !swatch.removed;
+            renderSwatchGrid();
+            requestRender(true);
+            scheduleFullFinalize();
+          });
+
+          swatchGrid.appendChild(card);
+        });
+
+        selectedSwatchCountEl.textContent = String(removedCount);
+      }
+
+      function addEyedropperColorAtImagePoint(imgX, imgY) {
+        if (!fullSrcData || !state.width || !state.height) return;
+        const x = Math.max(0, Math.min(state.width - 1, Math.round(imgX)));
+        const y = Math.max(0, Math.min(state.height - 1, Math.round(imgY)));
+        const idx = (y * state.width + x) * 4;
+        const r = fullSrcData[idx];
+        const g = fullSrcData[idx + 1];
+        const b = fullSrcData[idx + 2];
+        const hex = rgbToHex(r, g, b);
+
+        pushHistorySnapshot();
+
+        // Check if an existing swatch is already very close
+        let match = state.palette.find((s) => colorDistRgb(s.r, s.g, s.b, r, g, b) < 12);
+        if (match) {
+          match.removed = !match.removed;
+          showToast(`${match.removed ? 'Removed' : 'Restored'} ${match.hex}`);
+        } else {
+          state.palette.unshift({
+            id: state.palette.length,
+            r,
+            g,
+            b,
+            hex,
+            pct: 0.1,
+            isBorder: x === 0 || y === 0 || x === state.width - 1 || y === state.height - 1,
+            removed: true
+          });
+          rebuildNearestSwatchLookup();
+          showToast(`Added & removed ${hex}`);
+        }
+
+        state.eyedropperActive = false;
+        eyedropperBtn.classList.remove('ring-2', 'ring-blue-400', 'bg-blue-950/60');
+        renderSwatchGrid();
+        requestRender(true);
+        scheduleFullFinalize();
+      }
+
+      // =========================================================================
+      // 8. WAND, BRUSH & LASSO TOOLS ON WORKING MASK
+      // =========================================================================
+      function screenToImageCoords(clientX, clientY) {
+        const rect = viewportCanvas.getBoundingClientRect();
+        const sx = clientX - rect.left;
+        const sy = clientY - rect.top;
+        return {
+          screenX: sx,
+          screenY: sy,
+          imgX: (sx - state.panX) / Math.max(0.001, state.zoom),
+          imgY: (sy - state.panY) / Math.max(0.001, state.zoom)
+        };
+      }
+
+      function applyWandAt(imgX, imgY) {
+        if (!workSrcData || !workW || !workH) return;
+        const wx = Math.floor(imgX * workScale);
+        const wy = Math.floor(imgY * workScale);
+        if (wx < 0 || wy < 0 || wx >= workW || wy >= workH) return;
+
+        pushHistorySnapshot();
+
+        const startIdx = wy * workW + wx;
+        const sPos = startIdx * 4;
+        const sr = workSrcData[sPos];
+        const sg = workSrcData[sPos + 1];
+        const sb = workSrcData[sPos + 2];
+        const tol = state.wandTolerance;
+        const targetVal = state.wandAction === 'erase' ? 0 : 255;
+        const total = workW * workH;
+
+        const matchesColor = (idx) => {
+          const p = idx * 4;
+          return colorDistRgb(sr, sg, sb, workSrcData[p], workSrcData[p + 1], workSrcData[p + 2]) <= tol;
+        };
+
+        if (state.wandContiguous) {
+          const visited = new Uint8Array(total);
+          const queue = new Int32Array(total);
+          let head = 0;
+          let tail = 0;
+          visited[startIdx] = 1;
+          queue[tail++] = startIdx;
+
+          while (head < tail) {
+            const cur = queue[head++];
+            workManualActive[cur] = 1;
+            workManualMask[cur] = targetVal;
+
+            const cx = cur % workW;
+            const cy = (cur - cx) / workW;
+
+            const neighbors = [
+              cx > 0 ? cur - 1 : -1,
+              cx < workW - 1 ? cur + 1 : -1,
+              cy > 0 ? cur - workW : -1,
+              cy < workH - 1 ? cur + workW : -1
+            ];
+            for (let n = 0; n < 4; n++) {
+              const nIdx = neighbors[n];
+              if (nIdx >= 0 && !visited[nIdx] && matchesColor(nIdx)) {
+                visited[nIdx] = 1;
+                queue[tail++] = nIdx;
+              }
+            }
+          }
+        } else {
+          for (let i = 0; i < total; i++) {
+            if (matchesColor(i)) {
+              workManualActive[i] = 1;
+              workManualMask[i] = targetVal;
+            }
+          }
+        }
+
+        syncWorkManualToFull();
+        requestRender(true);
+        scheduleFullFinalize();
+        showToast(state.wandAction === 'erase' ? 'Erased wand region' : 'Restored wand region');
+      }
+
+      function paintBrushSegment(fromImg, toImg) {
+        if (!workManualMask || !workManualActive || !workW || !workH) return;
+
+        const x0 = fromImg.x * workScale;
+        const y0 = fromImg.y * workScale;
+        const x1 = toImg.x * workScale;
+        const y1 = toImg.y * workScale;
+
+        const radius = Math.max(1, (state.brushSize * 0.5) * workScale);
+        const hardness = state.brushHardness / 100;
+        const isErase = state.brushMode === 'erase';
+
+        const dist = Math.hypot(x1 - x0, y1 - y0);
+        const steps = Math.max(1, Math.ceil(dist / Math.max(1, radius * 0.35)));
+
+        for (let s = 0; s <= steps; s++) {
+          const t = steps === 0 ? 0 : s / steps;
+          const cx = x0 + (x1 - x0) * t;
+          const cy = y0 + (y1 - y0) * t;
+
+          const minX = Math.max(0, Math.floor(cx - radius));
+          const maxX = Math.min(workW - 1, Math.ceil(cx + radius));
+          const minY = Math.max(0, Math.floor(cy - radius));
+          const maxY = Math.min(workH - 1, Math.ceil(cy + radius));
+
+          for (let y = minY; y <= maxY; y++) {
+            const dy = y - cy;
+            const row = y * workW;
+            for (let x = minX; x <= maxX; x++) {
+              const dx = x - cx;
+              const d = Math.hypot(dx, dy);
+              if (d > radius) continue;
+
+              const innerR = radius * hardness;
+              let strength = 1;
+              if (d > innerR && radius > innerR) {
+                strength = 1 - (d - innerR) / (radius - innerR);
+              }
+
+              const idx = row + x;
+              workManualActive[idx] = 1;
+              const curVal = workManualMask[idx];
+              if (isErase) {
+                const desired = Math.round((1 - strength) * 255);
+                workManualMask[idx] = Math.min(curVal, desired);
+              } else {
+                const desired = Math.round(strength * 255);
+                workManualMask[idx] = Math.max(curVal, desired);
+              }
+            }
+          }
+        }
+
+        requestRender(true);
+      }
+
+      function applyLassoPolygon(points) {
+        if (!points || points.length < 3 || !workManualMask || !workManualActive) return;
+        pushHistorySnapshot();
+
+        const poly = points.map((pt) => ({
+          x: pt.x * workScale,
+          y: pt.y * workScale
+        }));
+
+        let minX = workW, maxX = 0, minY = workH, maxY = 0;
+        for (const p of poly) {
+          if (p.x < minX) minX = p.x;
+          if (p.x > maxX) maxX = p.x;
+          if (p.y < minY) minY = p.y;
+          if (p.y > maxY) maxY = p.y;
+        }
+        minX = Math.max(0, Math.floor(minX));
+        maxX = Math.min(workW - 1, Math.ceil(maxX));
+        minY = Math.max(0, Math.floor(minY));
+        maxY = Math.min(workH - 1, Math.ceil(maxY));
+
+        // Ray-casting point-in-polygon test
+        const insidePoly = (px, py) => {
+          let inside = false;
+          for (let i = 0, j = poly.length - 1; i < poly.length; j = i++) {
+            const xi = poly[i].x, yi = poly[i].y;
+            const xj = poly[j].x, yj = poly[j].y;
+            const intersect = ((yi > py) !== (yj > py)) &&
+              (px < (xj - xi) * (py - yi) / ((yj - yi) || 1e-6) + xi);
+            if (intersect) inside = !inside;
+          }
+          return inside;
+        };
+
+        const eraseInside = state.lassoMode === 'erase-inside';
+        const total = workW * workH;
+
+        if (eraseInside) {
+          for (let y = minY; y <= maxY; y++) {
+            const row = y * workW;
+            for (let x = minX; x <= maxX; x++) {
+              if (insidePoly(x + 0.5, y + 0.5)) {
+                const idx = row + x;
+                workManualActive[idx] = 1;
+                workManualMask[idx] = 0;
+              }
+            }
+          }
+        } else {
+          // Keep inside only: erase everything outside polygon
+          for (let i = 0; i < total; i++) {
+            const x = i % workW;
+            const y = (i - x) / workW;
+            const inside = (x >= minX && x <= maxX && y >= minY && y <= maxY) && insidePoly(x + 0.5, y + 0.5);
+            if (!inside) {
+              workManualActive[i] = 1;
+              workManualMask[i] = 0;
+            }
+          }
+        }
+
+        if (state.lassoFeather > 0) {
+          const blurred = blurAlphaChannel(workManualMask, workW, workH, state.lassoFeather * workScale);
+          for (let i = 0; i < total; i++) {
+            if (workManualActive[i]) {
+              workManualMask[i] = blurred[i];
+            }
+          }
+        }
+
+        syncWorkManualToFull();
+        requestRender(true);
+        scheduleFullFinalize();
+        showToast(eraseInside ? 'Erased inside lasso' : 'Kept inside lasso');
+      }
+
+      // =========================================================================
+      // 9. POINTER, KEYBOARD, RESIZE & EXPORT HANDLERS
+      // =========================================================================
+      function setActiveTab(tabName) {
+        state.activeTab = tabName;
+        if (tabName !== 'lasso') {
+          state.lassoPoints = [];
+          state.isDrawingLasso = false;
+        }
+        document.querySelectorAll('.tool-tab').forEach((btn) => {
+          const active = btn.dataset.tab === tabName;
+          btn.classList.toggle('bg-blue-600', active);
+          btn.classList.toggle('text-white', active);
+          btn.classList.toggle('shadow-sm', active);
+          btn.classList.toggle('text-slate-300', !active);
+          btn.classList.toggle('hover:bg-studio-800', !active);
+        });
+        document.querySelectorAll('.tool-panel').forEach((panel) => {
+          panel.classList.toggle('hidden', panel.id !== `panel-${tabName}`);
+        });
+        requestRender(false);
+      }
+
+      function syncControlsFromState() {
+        toleranceSlider.value = String(state.tolerance);
+        toleranceValue.textContent = String(state.tolerance);
+        softnessSlider.value = String(state.softness);
+        softnessValue.textContent = `${state.softness}%`;
+
+        const isAll = state.scope === 'all';
+        scopeAllBtn.classList.toggle('bg-blue-600', isAll);
+        scopeAllBtn.classList.toggle('text-white', isAll);
+        scopeAllBtn.classList.toggle('text-slate-300', !isAll);
+        scopeEdgesBtn.classList.toggle('bg-blue-600', !isAll);
+        scopeEdgesBtn.classList.toggle('text-white', !isAll);
+        scopeEdgesBtn.classList.toggle('text-slate-300', isAll);
+
+        wandToleranceSlider.value = String(state.wandTolerance);
+        wandToleranceValue.textContent = String(state.wandTolerance);
+        wandContiguousCheckbox.checked = state.wandContiguous;
+
+        brushSizeSlider.value = String(state.brushSize);
+        brushSizeValue.textContent = `${state.brushSize} px`;
+        brushHardnessSlider.value = String(state.brushHardness);
+        brushHardnessValue.textContent = `${state.brushHardness}%`;
+
+        lassoFeatherSlider.value = String(state.lassoFeather);
+        lassoFeatherValue.textContent = `${state.lassoFeather} px`;
+
+        refineFeatherSlider.value = String(state.refineFeather);
+        refineFeatherValue.textContent = `${state.refineFeather} px`;
+        refineShiftSlider.value = String(state.refineShift);
+        refineShiftValue.textContent = `${state.refineShift} px`;
+      }
+
+      // Pointer events on viewport canvas
+      viewportCanvas.addEventListener('pointerdown', (e) => {
+        if (!state.width || !state.height) return;
+        viewportCanvas.setPointerCapture(e.pointerId);
+
+        const pt = screenToImageCoords(e.clientX, e.clientY);
+        state.lastPointer = { x: e.clientX, y: e.clientY };
+        state.pointerScreen = { x: pt.screenX, y: pt.screenY };
+
+        // Split compare slider drag check
+        if (state.splitCompare) {
+          const splitX = state.panX + state.width * state.zoom * state.splitRatio;
+          if (Math.abs(pt.screenX - splitX) <= 18) {
+            state.isDraggingSplit = true;
+            return;
+          }
+        }
+
+        // Panning via middle click, spacebar, or pan mode
+        if (e.button === 1 || state.spaceHeld || panToolBtn.dataset.active === 'true') {
+          state.isPanning = true;
+          return;
+        }
+
+        if (state.eyedropperActive) {
+          addEyedropperColorAtImagePoint(pt.imgX, pt.imgY);
+          return;
+        }
+
+        if (state.activeTab === 'wand') {
+          applyWandAt(pt.imgX, pt.imgY);
+          return;
+        }
+
+        if (state.activeTab === 'brush') {
+          pushHistorySnapshot();
+          state.isPainting = true;
+          state.lastImagePt = { x: pt.imgX, y: pt.imgY };
+          paintBrushSegment(state.lastImagePt, state.lastImagePt);
+          return;
+        }
+
+        if (state.activeTab === 'lasso') {
+          state.isDrawingLasso = true;
+          state.lassoPoints = [{ x: pt.imgX, y: pt.imgY }];
+          requestRender(false);
+        }
+      });
+
+      viewportCanvas.addEventListener('pointermove', (e) => {
+        const pt = screenToImageCoords(e.clientX, e.clientY);
+        state.pointerScreen = { x: pt.screenX, y: pt.screenY };
+
+        if (state.isDraggingSplit && state.width > 0) {
+          const dw = Math.max(1, state.width * state.zoom);
+          state.splitRatio = Math.max(0.02, Math.min(0.98, (pt.screenX - state.panX) / dw));
+          requestRender(false);
+          return;
+        }
+
+        if (state.isPanning) {
+          const dx = e.clientX - state.lastPointer.x;
+          const dy = e.clientY - state.lastPointer.y;
+          state.lastPointer = { x: e.clientX, y: e.clientY };
+          state.panX += dx;
+          state.panY += dy;
+          requestRender(false);
+          return;
+        }
+
+        if (state.isPainting && state.activeTab === 'brush') {
+          const curImg = { x: pt.imgX, y: pt.imgY };
+          paintBrushSegment(state.lastImagePt || curImg, curImg);
+          state.lastImagePt = curImg;
+          return;
+        }
+
+        if (state.isDrawingLasso && state.activeTab === 'lasso') {
+          const last = state.lassoPoints[state.lassoPoints.length - 1];
+          if (!last || Math.hypot(pt.imgX - last.x, pt.imgY - last.y) >= 2.5) {
+            state.lassoPoints.push({ x: pt.imgX, y: pt.imgY });
+            requestRender(false);
+          }
+          return;
+        }
+
+        if (state.activeTab === 'brush' || state.eyedropperActive) {
+          requestRender(false);
+        }
+      });
+
+      function finishPointerAction(e) {
+        if (e && viewportCanvas.hasPointerCapture(e.pointerId)) {
+          try { viewportCanvas.releasePointerCapture(e.pointerId); } catch (_) {}
+        }
+
+        if (state.isDraggingSplit) {
+          state.isDraggingSplit = false;
+        }
+        if (state.isPanning) {
+          state.isPanning = false;
+        }
+        if (state.isPainting) {
+          state.isPainting = false;
+          state.lastImagePt = null;
+          syncWorkManualToFull();
+          scheduleFullFinalize();
+        }
+        if (state.isDrawingLasso) {
+          state.isDrawingLasso = false;
+          const pts = state.lassoPoints.slice();
+          state.lassoPoints = [];
+          if (pts.length >= 3) {
+            applyLassoPolygon(pts);
+          } else {
+            requestRender(false);
+          }
+        }
+      }
+
+      viewportCanvas.addEventListener('pointerup', finishPointerAction);
+      viewportCanvas.addEventListener('pointercancel', finishPointerAction);
+      viewportCanvas.addEventListener('pointerleave', () => {
+        state.pointerScreen = null;
+        if (!state.isPainting && !state.isDrawingLasso && !state.isPanning) {
+          requestRender(false);
+        }
+      });
+
+      // Mouse wheel zoom centered on cursor
+      viewportCanvas.addEventListener('wheel', (e) => {
+        e.preventDefault();
+        if (!state.width || !state.height) return;
+        const pt = screenToImageCoords(e.clientX, e.clientY);
+        const factor = e.deltaY < 0 ? 1.12 : 1 / 1.12;
+        const nextZoom = Math.max(0.05, Math.min(8, state.zoom * factor));
+        state.panX = pt.screenX - pt.imgX * nextZoom;
+        state.panY = pt.screenY - pt.imgY * nextZoom;
+        state.zoom = nextZoom;
+        zoomLabel.textContent = `${Math.round(state.zoom * 100)}%`;
+        requestRender(false);
+      }, { passive: false });
+
+      // Zoom & pan HUD buttons
+      function zoomBy(factor) {
+        if (!state.width || !state.height) return;
+        const { width: stageW, height: stageH } = getStageSize();
+        const cx = stageW * 0.5;
+        const cy = stageH * 0.5;
+        const imgX = (cx - state.panX) / state.zoom;
+        const imgY = (cy - state.panY) / state.zoom;
+        const nextZoom = Math.max(0.05, Math.min(8, state.zoom * factor));
+        state.panX = cx - imgX * nextZoom;
+        state.panY = cy - imgY * nextZoom;
+        state.zoom = nextZoom;
+        zoomLabel.textContent = `${Math.round(state.zoom * 100)}%`;
+        requestRender(false);
+      }
+
+      zoomInBtn.addEventListener('click', () => zoomBy(1.2));
+      zoomOutBtn.addEventListener('click', () => zoomBy(1 / 1.2));
+      fitScreenBtn.addEventListener('click', fitImageToViewport);
+
+      panToolBtn.addEventListener('click', () => {
+        const active = panToolBtn.dataset.active === 'true';
+        panToolBtn.dataset.active = String(!active);
+        panToolBtn.classList.toggle('bg-blue-600', !active);
+        panToolBtn.classList.toggle('text-white', !active);
+      });
+
+      // Top bar & inspector controls
+      uploadBtn.addEventListener('click', () => fileInput.click());
+      fileInput.addEventListener('change', (e) => {
+        const file = e.target.files && e.target.files[0];
+        if (file) handleUploadedFile(file);
+        fileInput.value = '';
+      });
+
+      function handleUploadedFile(file) {
+        if (!file || !file.type.startsWith('image/')) {
+          showToast('Please choose a valid PNG, JPG, or WebP image.');
+          return;
+        }
+        const reader = new FileReader();
+        reader.onload = (ev) => {
+          const img = new Image();
+          img.onload = () => {
+            const cleanName = file.name.replace(/\.[^/.]+$/, '') || 'cutout';
+            initImageFromElement(img, cleanName);
+            showToast(`Loaded ${file.name} (${state.palette.length} colors)`);
+          };
+          img.onerror = () => showToast('Could not decode image file.');
+          img.src = ev.target.result;
+        };
+        reader.onerror = () => showToast('Failed to read file.');
+        reader.readAsDataURL(file);
+      }
+
+      // Drag and drop anywhere on window
+      window.addEventListener('dragover', (e) => {
+        e.preventDefault();
+        dropOverlay.classList.remove('hidden');
+      });
+      window.addEventListener('dragleave', (e) => {
+        if (e.clientX === 0 && e.clientY === 0) {
+          dropOverlay.classList.add('hidden');
+        }
+      });
+      window.addEventListener('drop', (e) => {
+        e.preventDefault();
+        dropOverlay.classList.add('hidden');
+        const file = e.dataTransfer && e.dataTransfer.files && e.dataTransfer.files[0];
+        if (file) handleUploadedFile(file);
+      });
+
+      // Paste image from clipboard (Ctrl+V)
+      window.addEventListener('paste', (e) => {
+        const items = e.clipboardData && e.clipboardData.items;
+        if (!items) return;
+        for (let i = 0; i < items.length; i++) {
+          if (items[i].type.startsWith('image/')) {
+            const file = items[i].getAsFile();
+            if (file) handleUploadedFile(file);
+            break;
+          }
+        }
+      });
+
+      // Samples menu
+      samplesBtn.addEventListener('click', (e) => {
+        e.stopPropagation();
+        samplesMenu.classList.toggle('hidden');
+      });
+      document.addEventListener('click', () => {
+        samplesMenu.classList.add('hidden');
+      });
+
+      document.querySelectorAll('[data-sample]').forEach((btn) => {
+        btn.addEventListener('click', () => {
+          loadSampleScene(btn.dataset.sample);
+          samplesMenu.classList.add('hidden');
+        });
+      });
+
+      function loadSampleScene(kind) {
+        const w = 720;
+        const h = 540;
+        const c = document.createElement('canvas');
+        c.width = w;
+        c.height = h;
+        const ctx = c.getContext('2d');
+
+        if (kind === 'sunset') {
+          ctx.fillStyle = '#0f766e';
+          ctx.fillRect(0, 0, w, h);
+
+          // Warm geometric lanterns
+          const lanterns = [
+            { x: 210, y: 270, r: 85, color: '#f97316', trim: '#fde047' },
+            { x: 360, y: 240, r: 105, color: '#ef4444', trim: '#fed7aa' },
+            { x: 515, y: 280, r: 80, color: '#f59e0b', trim: '#fef08a' }
+          ];
+          lanterns.forEach((l) => {
+            ctx.strokeStyle = l.trim;
+            ctx.lineWidth = 4;
+            ctx.beginPath();
+            ctx.moveTo(l.x, 40);
+            ctx.lineTo(l.x, l.y - l.r);
+            ctx.stroke();
+
+            ctx.fillStyle = l.color;
+            ctx.beginPath();
+            ctx.ellipse(l.x, l.y, l.r * 0.88, l.r, 0, 0, Math.PI * 2);
+            ctx.fill();
+
+            ctx.fillStyle = l.trim;
+            ctx.fillRect(l.x - l.r * 0.45, l.y - l.r - 8, l.r * 0.9, 10);
+            ctx.fillRect(l.x - l.r * 0.45, l.y + l.r - 2, l.r * 0.9, 10);
+          });
+
+          const img = new Image();
+          img.onload = () => initImageFromElement(img, 'geometric-lanterns');
+          img.src = c.toDataURL('image/png');
+          return;
+        }
+
+        if (kind === 'botanical') {
+          ctx.fillStyle = '#f8fafc';
+          ctx.fillRect(0, 0, w, h);
+
+          // Stem & leaves
+          ctx.strokeStyle = '#16a34a';
+          ctx.lineWidth = 10;
+          ctx.lineCap = 'round';
+          ctx.beginPath();
+          ctx.moveTo(360, 470);
+          ctx.quadraticCurveTo(340, 320, 360, 190);
+          ctx.stroke();
+
+          ctx.fillStyle = '#22c55e';
+          ctx.beginPath();
+          ctx.ellipse(305, 340, 56, 24, -0.45, 0, Math.PI * 2);
+          ctx.fill();
+          ctx.beginPath();
+          ctx.ellipse(415, 315, 56, 24, 0.45, 0, Math.PI * 2);
+          ctx.fill();
+
+          // Petals
+          const cx = 360, cy = 185;
+          for (let i = 0; i < 6; i++) {
+            const angle = (i * Math.PI) / 3;
+            ctx.save();
+            ctx.translate(cx + Math.cos(angle) * 52, cy + Math.sin(angle) * 52);
+            ctx.rotate(angle);
+            ctx.fillStyle = i % 2 === 0 ? '#ec4899' : '#f43f5e';
+            ctx.beginPath();
+            ctx.ellipse(0, 0, 44, 24, 0, 0, Math.PI * 2);
+            ctx.fill();
+            ctx.restore();
+          }
+
+          ctx.fillStyle = '#facc15';
+          ctx.beginPath();
+          ctx.arc(cx, cy, 26, 0, Math.PI * 2);
+          ctx.fill();
+
+          const img = new Image();
+          img.onload = () => initImageFromElement(img, 'botanical-blossom');
+          img.src = c.toDataURL('image/png');
+          return;
+        }
+
+        // Default: Color Crest & Star over crisp light-blue backdrop
+        ctx.fillStyle = '#e0f2fe';
+        ctx.fillRect(0, 0, w, h);
+
+        ctx.fillStyle = '#1e293b';
+        ctx.beginPath();
+        ctx.arc(w / 2, h / 2, 165, 0, Math.PI * 2);
+        ctx.fill();
+
+        ctx.fillStyle = '#3b82f6';
+        ctx.beginPath();
+        ctx.arc(w / 2, h / 2, 142, 0, Math.PI * 2);
+        ctx.fill();
+
+        // Five-point star in vibrant gold
+        const scx = w / 2;
+        const scy = h / 2;
+        ctx.fillStyle = '#fbbf24';
+        ctx.beginPath();
+        for (let i = 0; i < 10; i++) {
+          const rad = i % 2 === 0 ? 84 : 36;
+          const ang = -Math.PI / 2 + (i * Math.PI) / 5;
+          const px = scx + Math.cos(ang) * rad;
+          const py = scy + Math.sin(ang) * rad;
+          if (i === 0) ctx.moveTo(px, py);
+          else ctx.lineTo(px, py);
+        }
+        ctx.closePath();
+        ctx.fill();
+
+        const img = new Image();
+        img.onload = () => initImageFromElement(img, 'color-crest');
+        img.src = c.toDataURL('image/png');
+      }
+
+      // Tabs
+      document.querySelectorAll('.tool-tab').forEach((btn) => {
+        btn.addEventListener('click', () => setActiveTab(btn.dataset.tab));
+      });
+
+      // Swatch controls
+      swatchCountSelect.addEventListener('change', () => {
+        state.swatchCount = parseInt(swatchCountSelect.value, 10) || 16;
+        if (!fullSrcData || !state.width || !state.height) return;
+        pushHistorySnapshot();
+        state.palette = extractPaletteFromSource(fullSrcData, state.width, state.height, state.swatchCount);
+        rebuildNearestSwatchLookup();
+        renderSwatchGrid();
+        requestRender(true);
+        scheduleFullFinalize();
+        showToast(`Extracted ${state.palette.length} colors`);
+      });
+
+      eyedropperBtn.addEventListener('click', () => {
+        state.eyedropperActive = !state.eyedropperActive;
+        eyedropperBtn.classList.toggle('ring-2', state.eyedropperActive);
+        eyedropperBtn.classList.toggle('ring-blue-400', state.eyedropperActive);
+        eyedropperBtn.classList.toggle('bg-blue-950/60', state.eyedropperActive);
+        showToast(state.eyedropperActive ? 'Click any pixel on the image to pick color' : 'Eyedropper off');
+      });
+
+      pickBorderSwatchesBtn.addEventListener('click', () => {
+        if (!state.palette.length) return;
+        pushHistorySnapshot();
+        let picked = 0;
+        state.palette.forEach((s) => {
+          if (s.isBorder) {
+            s.removed = true;
+            picked++;
+          }
+        });
+        renderSwatchGrid();
+        requestRender(true);
+        scheduleFullFinalize();
+        showToast(picked ? `Selected ${picked} border color(s)` : 'No distinct border swatches found');
+      });
+
+      clearSwatchesBtn.addEventListener('click', () => {
+        if (!state.palette.some((s) => s.removed)) return;
+        pushHistorySnapshot();
+        state.palette.forEach((s) => { s.removed = false; });
+        renderSwatchGrid();
+        requestRender(true);
+        scheduleFullFinalize();
+      });
+
+      scopeAllBtn.addEventListener('click', () => {
+        state.scope = 'all';
+        syncControlsFromState();
+        requestRender(true);
+        scheduleFullFinalize();
+      });
+
+      scopeEdgesBtn.addEventListener('click', () => {
+        state.scope = 'edges';
+        syncControlsFromState();
+        requestRender(true);
+        scheduleFullFinalize();
+      });
+
+      toleranceSlider.addEventListener('input', () => {
+        state.tolerance = parseInt(toleranceSlider.value, 10);
+        toleranceValue.textContent = String(state.tolerance);
+        requestRender(true);
+        scheduleFullFinalize();
+      });
+
+      softnessSlider.addEventListener('input', () => {
+        state.softness = parseInt(softnessSlider.value, 10);
+        softnessValue.textContent = `${state.softness}%`;
+        requestRender(true);
+        scheduleFullFinalize();
+      });
+
+      // Wand controls
+      wandActionErase.addEventListener('click', () => {
+        state.wandAction = 'erase';
+        wandActionErase.className = 'py-1.5 px-2 rounded-md text-[11px] font-medium bg-rose-600 text-white cursor-pointer';
+        wandActionRestore.className = 'py-1.5 px-2 rounded-md text-[11px] font-medium text-slate-300 hover:text-white cursor-pointer';
+      });
+      wandActionRestore.addEventListener('click', () => {
+        state.wandAction = 'restore';
+        wandActionRestore.className = 'py-1.5 px-2 rounded-md text-[11px] font-medium bg-emerald-600 text-white cursor-pointer';
+        wandActionErase.className = 'py-1.5 px-2 rounded-md text-[11px] font-medium text-slate-300 hover:text-white cursor-pointer';
+      });
+      wandToleranceSlider.addEventListener('input', () => {
+        state.wandTolerance = parseInt(wandToleranceSlider.value, 10);
+        wandToleranceValue.textContent = String(state.wandTolerance);
+      });
+      wandContiguousCheckbox.addEventListener('change', () => {
+        state.wandContiguous = wandContiguousCheckbox.checked;
+      });
+
+      // Brush controls
+      brushModeErase.addEventListener('click', () => {
+        state.brushMode = 'erase';
+        brushModeErase.className = 'py-1.5 px-2 rounded-md text-[11px] font-medium bg-rose-600 text-white cursor-pointer';
+        brushModeRestore.className = 'py-1.5 px-2 rounded-md text-[11px] font-medium text-slate-300 hover:text-white cursor-pointer';
+      });
+      brushModeRestore.addEventListener('click', () => {
+        state.brushMode = 'restore';
+        brushModeRestore.className = 'py-1.5 px-2 rounded-md text-[11px] font-medium bg-emerald-600 text-white cursor-pointer';
+        brushModeErase.className = 'py-1.5 px-2 rounded-md text-[11px] font-medium text-slate-300 hover:text-white cursor-pointer';
+      });
+      brushSizeSlider.addEventListener('input', () => {
+        state.brushSize = parseInt(brushSizeSlider.value, 10);
+        brushSizeValue.textContent = `${state.brushSize} px`;
+      });
+      brushHardnessSlider.addEventListener('input', () => {
+        state.brushHardness = parseInt(brushHardnessSlider.value, 10);
+        brushHardnessValue.textContent = `${state.brushHardness}%`;
+      });
+
+      // Lasso controls
+      lassoModeEraseInside.addEventListener('click', () => {
+        state.lassoMode = 'erase-inside';
+        lassoModeEraseInside.className = 'py-1.5 px-2 rounded-md text-[11px] font-medium bg-rose-600 text-white cursor-pointer';
+        lassoModeKeepInside.className = 'py-1.5 px-2 rounded-md text-[11px] font-medium text-slate-300 hover:text-white cursor-pointer';
+      });
+      lassoModeKeepInside.addEventListener('click', () => {
+        state.lassoMode = 'keep-inside';
+        lassoModeKeepInside.className = 'py-1.5 px-2 rounded-md text-[11px] font-medium bg-blue-600 text-white cursor-pointer';
+        lassoModeEraseInside.className = 'py-1.5 px-2 rounded-md text-[11px] font-medium text-slate-300 hover:text-white cursor-pointer';
+      });
+      lassoFeatherSlider.addEventListener('input', () => {
+        state.lassoFeather = parseInt(lassoFeatherSlider.value, 10);
+        lassoFeatherValue.textContent = `${state.lassoFeather} px`;
+      });
+
+      // Refine controls
+      refineFeatherSlider.addEventListener('input', () => {
+        state.refineFeather = parseInt(refineFeatherSlider.value, 10);
+        refineFeatherValue.textContent = `${state.refineFeather} px`;
+        requestRender(true);
+        scheduleFullFinalize();
+      });
+      refineShiftSlider.addEventListener('input', () => {
+        state.refineShift = parseInt(refineShiftSlider.value, 10);
+        refineShiftValue.textContent = `${state.refineShift} px`;
+        requestRender(true);
+        scheduleFullFinalize();
+      });
+
+      applyRefineBtn.addEventListener('click', () => {
+        if (!workFinalAlpha || !workManualMask || !workManualActive) return;
+        pushHistorySnapshot();
+        const total = workW * workH;
+        for (let i = 0; i < total; i++) {
+          if (workBaseAlpha[i] > 0) {
+            workManualActive[i] = 1;
+            workManualMask[i] = workFinalAlpha[i];
+          }
+        }
+        state.refineFeather = 0;
+        state.refineShift = 0;
+        syncControlsFromState();
+        syncWorkManualToFull();
+        requestRender(true);
+        scheduleFullFinalize();
+        showToast('Baked edge refinement into mask');
+      });
+
+      trimTransparentCheckbox.addEventListener('change', () => {
+        state.trimTransparent = trimTransparentCheckbox.checked;
+      });
+
+      // History & Reset
+      undoBtn.addEventListener('click', undo);
+      redoBtn.addEventListener('click', redo);
+
+      resetBtn.addEventListener('click', () => {
+        if (!state.width || !state.height) return;
+        pushHistorySnapshot();
+        state.palette.forEach((s) => { s.removed = false; });
+        state.refineFeather = 0;
+        state.refineShift = 0;
+        workManualActive.fill(0);
+        workManualMask.fill(255);
+        fullManualActive.fill(0);
+        fullManualMask.fill(255);
+        syncControlsFromState();
+        renderSwatchGrid();
+        requestRender(true);
+        scheduleFullFinalize();
+        showToast('Reset mask to original image');
+      });
+
+      // Split compare
+      compareBtn.addEventListener('click', () => {
+        state.splitCompare = !state.splitCompare;
+        compareBtn.classList.toggle('ring-2', state.splitCompare);
+        compareBtn.classList.toggle('ring-amber-400', state.splitCompare);
+        compareBtn.classList.toggle('bg-studio-750', state.splitCompare);
+        requestRender(false);
+      });
+
+      // Full-resolution Transparent PNG Download
+      downloadBtn.addEventListener('click', () => {
+        try {
+          if (!state.width || !state.height || !fullSrcData) {
+            showToast('Load an image before exporting.');
+            return;
+          }
+
+          finalizeFullResolutionMask();
+
+          let minX = 0, minY = 0, maxX = state.width - 1, maxY = state.height - 1;
+          if (state.trimTransparent) {
+            let found = false;
+            minX = state.width;
+            minY = state.height;
+            maxX = -1;
+            maxY = -1;
+            for (let y = 0; y < state.height; y++) {
+              const row = y * state.width;
+              for (let x = 0; x < state.width; x++) {
+                if (fullFinalAlpha[row + x] > 0) {
+                  found = true;
+                  if (x < minX) minX = x;
+                  if (x > maxX) maxX = x;
+                  if (y < minY) minY = y;
+                  if (y > maxY) maxY = y;
+                }
+              }
+            }
+            if (!found) {
+              minX = 0; minY = 0; maxX = state.width - 1; maxY = state.height - 1;
+            }
+          }
+
+          const outW = Math.max(1, maxX - minX + 1);
+          const outH = Math.max(1, maxY - minY + 1);
+          const outCanvas = document.createElement('canvas');
+          outCanvas.width = outW;
+          outCanvas.height = outH;
+          const outCtx = outCanvas.getContext('2d');
+          const outImg = outCtx.createImageData(outW, outH);
+          const dst = outImg.data;
+
+          let dIdx = 0;
+          for (let y = minY; y <= maxY; y++) {
+            const sRow = y * state.width;
+            for (let x = minX; x <= maxX; x++) {
+              const idx = sRow + x;
+              const sPos = idx * 4;
+              dst[dIdx] = fullSrcData[sPos];
+              dst[dIdx + 1] = fullSrcData[sPos + 1];
+              dst[dIdx + 2] = fullSrcData[sPos + 2];
+              dst[dIdx + 3] = fullFinalAlpha[idx];
+              dIdx += 4;
+            }
+          }
+          outCtx.putImageData(outImg, 0, 0);
+
+          outCanvas.toBlob((blob) => {
+            if (!blob) {
+              showToast('Could not generate PNG file.');
+              return;
+            }
+            const url = URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = `${state.fileName}-transparent.png`;
+            document.body.appendChild(a);
+            a.click();
+            document.body.removeChild(a);
+            setTimeout(() => URL.revokeObjectURL(url), 1000);
+            showToast(`Exported ${outW}×${outH} transparent PNG`);
+          }, 'image/png');
+        } catch (err) {
+          console.error('Export failed:', err);
+          showToast('Error exporting transparent PNG.');
+        }
+      });
+
+      // Keyboard shortcuts
+      window.addEventListener('keydown', (e) => {
+        if (e.code === 'Space') {
+          state.spaceHeld = true;
+        }
+        if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === 'z') {
+          e.preventDefault();
+          if (e.shiftKey) redo();
+          else undo();
+        } else if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === 'y') {
+          e.preventDefault();
+          redo();
+        }
+      });
+
+      window.addEventListener('keyup', (e) => {
+        if (e.code === 'Space') {
+          state.spaceHeld = false;
+          state.isPanning = false;
+        }
+      });
+
+      // Responsive resize handling via ResizeObserver + window resize
+      const stageObserver = new ResizeObserver(() => {
+        resizeViewportCanvas();
+        if (state.width && state.height) {
+          requestRender(false);
+        }
+      });
+      stageObserver.observe(canvasStage);
+
+      window.addEventListener('resize', () => {
+        resizeViewportCanvas();
+        if (state.width && state.height) {
+          requestRender(false);
+        }
+      });
+
+      // Boot application
+      window.addEventListener('DOMContentLoaded', () => {
+        try {
+          resizeViewportCanvas();
+          loadSampleScene('badge');
+          scheduleLayoutAndFit();
+        } catch (err) {
+          console.error('Startup error:', err);
+          showToast('Studio initialized with fallback mode.');
+        }
+      });
+    })();
+  </script>
+</body>
+</html>
